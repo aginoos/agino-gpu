@@ -190,11 +190,11 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ### 5.4 应用兼容（D-141 第 8 条）
 
-兼容配置放在 `/usr/share/agino-gpu/profiles/*.json`，按 desktop id、可执行文件名或特征（如 Electron）匹配，内容是“额外的环境变量 / 额外的启动参数 / 前置检查”。只由 `agino-gpu-run` 和 DAM 规则使用，不改应用自己的文件。
+P4 只做内置识别，不做通用的 profiles/*.json 配置机制；不改应用自己的文件。Chromium 类应用（识别规则见下）在带 `__NV_PRIME_RENDER_OFFLOAD=1` 时追加 ANGLE-Vulkan 启动参数，共三处实现、规则一致：Debian 包装脚本读取的 `/etc/chromium.d/agino-gpu`、`agino-gpu-run`（`src/lib/chromium.cpp`）、DAM 补丁（供启动器/任务栏菜单和始终用独显规则）。Flatpak 不在 P4 范围（用户决定 2026-10-26）。
 
 | 应用类别 | 问题 | 处理 |
 |---|---|---|
-| Chromium / Chrome / Edge / Electron | 自己选 GPU，X11 下走 EGL（ANGLE），只设 GLX 变量无效；有 GPU 黑名单 | 加 `__EGL_VENDOR_LIBRARY_FILENAMES`（5.1）；若 V-5 不通过，配置改为追加 `--use-angle=vulkan`（需要启动参数，DAM 规则改用 Exec 覆盖 `org.deepin.dde.am.appoverride`）。识别 Electron：可执行文件旁有 `resources/app.asar` 或链接 `libnode`。验证方法：`chrome://gpu` 的 GL_RENDERER |
+| Chromium / Chrome / Edge / Electron | 自己选 GPU，X11 下走 EGL（ANGLE），只设 GLX 变量无效；默认 ANGLE-GL 在按需渲染下失败（V-5） | 仅当环境含 `__NV_PRIME_RENDER_OFFLOAD=1`（Mesa 的 DRI_PRIME 不需要）时，在程序后、其他参数前插入 `--use-angle=vulkan --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`（用户自己的开关在后，后者生效；已有 `--use-angle=` 则不加）。识别：规范化（realpath）后的文件名为 chromium、chromium-browser、chrome、google-chrome[-stable/-beta/-unstable]、msedge、microsoft-edge[-stable/-beta/-dev]、brave[-browser]、vivaldi[-stable]、opera、electron、electron<数字>；或 Electron 应用：程序所在目录或其上一级有 `resources/app.asar` 或 `resources/app/package.json`。验证方法：`chrome://gpu` 的 GL_RENDERER |
 | Flatpak 应用 | 沙箱内需要与主机驱动同版本的 `org.freedesktop.Platform.GL.nvidia-<主>-<次>-<修订>` 运行时，版本不匹配时回退到软件渲染 | 只在装了 `flatpak` 时生效：读 `/sys/module/nvidia/version` 推出扩展名，检查是否已装；没装时快捷面板下级页面和控制中心提示，并提供“安装”（调用 `flatpak install --system flathub <扩展>`，由 flatpak 自己的 polkit 授权，需要网络）。环境变量由 `flatpak run` 传入沙箱（V-6 验证） |
 | Steam | 32 位游戏需要 i386 的 NVIDIA 用户态库；Steam 本身需要按需渲染变量传给游戏 | 规则作用于 Steam 本身，游戏继承；检查 `libnvidia-glcore:i386` 等是否安装，没装时提示（agino 源里是否有 i386 版本要确认，V-7） |
 | Proton / Wine / DXVK / VKD3D-Proton | Vulkan 枚举到两块卡，可能选错 | NVIDIA 用 `__VK_LAYER_NV_optimus=NVIDIA_only` 只暴露独显；Mesa 独显额外设 `DXVK_FILTER_DEVICE_NAME`、`VKD3D_FILTER_DEVICE_NAME`（取自 Vulkan 设备名，由 daemon 检测时记录） |
@@ -291,7 +291,7 @@ agino-gpu/
 ├── src/run/                 # agino-gpu-run
 ├── src/quickpanel/          # 快捷面板插件
 ├── src/dcc/                 # 控制中心插件（C++ + QML）
-├── data/                    # D-Bus/polkit/systemd/udev/lightdm 文件、profiles、default-rules
+├── data/                    # D-Bus/polkit/systemd/udev/lightdm 文件、chromium.d、default-rules
 ├── tests/                   # 单元测试 + sysfs 夹具
 └── docs/
 ```

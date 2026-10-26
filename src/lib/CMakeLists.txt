@@ -6,6 +6,7 @@ add_library(agino-gpu STATIC
     mode.cpp
     dgpuusers.cpp
     offloadenv.cpp
+    chromium.cpp
     configgen.cpp
     rules.cpp
 )

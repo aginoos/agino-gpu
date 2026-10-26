@@ -28,6 +28,11 @@ add_test(NAME xsession-68agino-gpu
          COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/xsession/test-68agino-gpu.sh
                  ${PROJECT_SOURCE_DIR}/data/xsession/68agino-gpu)
 
+# tests/chromium.d: the Chromium wrapper snippet, sourced by a POSIX shell.
+add_test(NAME chromium-d-agino-gpu
+         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/chromium.d/test-agino-gpu.sh
+                 ${PROJECT_SOURCE_DIR}/data/chromium.d/agino-gpu)
+
 # tests/manual: tools run by hand (not by ctest), e.g. rendering the quick panel offscreen.
 if(AGINO_GPU_BUILD_PLUGINS)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
