@@ -1,0 +1,10 @@
+# Synthetic excerpt of pci.ids for the agino-gpu tests
+8086  Intel Corporation
+	7d51  Arrow Lake-H [Intel Graphics]
+	7ecc  Arrow Lake PCI Express Root Port
+10de  NVIDIA Corporation
+	22e9  GB203 High Definition Audio Controller
+	2c19  GB203M / GN22-X9 [GeForce RTX 5080 Max-Q / Mobile]
+	2c20  GB203 [GeForce RTX 5080]
+1002  Advanced Micro Devices, Inc. [AMD/ATI]
+	7480  Navi 33 [Radeon RX 7600/7600 XT/7600M XT/PRO W7600]

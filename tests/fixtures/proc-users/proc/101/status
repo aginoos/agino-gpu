@@ -1,0 +1,5 @@
+Name:	firefox
+Umask:	0022
+State:	S (sleeping)
+Pid:	101
+Uid:	1000	1000	1000	1000
