@@ -60,7 +60,9 @@ void GpuState::init()
 
 bool GpuState::isMultiGpu() const
 {
-    return m_hw.hardwareClass != HardwareClass::Single && !offeredModes().isEmpty();
+    // Not hardwareClass: in integrated mode the discrete GPU is removed and the machine looks
+    // single, yet the user must still be able to switch back.
+    return !offeredModes().isEmpty();
 }
 
 PendingAction GpuState::pendingAction() const

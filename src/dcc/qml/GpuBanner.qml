@@ -45,7 +45,7 @@ Rectangle {
                     required property var modelData
                     text: modelData.id === "dismiss" ? "×" : modelData.label
                     flat: modelData.id === "dismiss" || modelData.id === "details"
-                    highlighted: modelData.primary
+                    highlighted: modelData.primary === true
                     enabled: !dccData.busy
                     onClicked: {
                         if (modelData.id === "details")

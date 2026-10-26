@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick 2.15
 import QtQuick.Controls 2.0
-import QtQuick.Dialogs
+import Qt.labs.platform 1.1 as P
 import QtQuick.Layouts 1.15
 
 import org.deepin.dtk 1.0 as D
@@ -16,18 +16,22 @@ DccObject {
     readonly property var model: dccData.addApp
 
     function backToGpuPage() {
-        DccApp.showPage(DccApp.object("gpu"), "")
+        DccApp.showPage(DccApp.object("gpu"))
     }
 
     page: DccSettingsView {
         Component.onCompleted: root.model.reset()
     }
 
-    FileDialog {
+    // Qt.labs.platform like DCC's own plugins (NetFileChooseEdit.qml): it goes through the DTK
+    // platform dialog and can be parented to the DCC window.
+    P.FileDialog {
         id: fileDialog
         title: qsTr("Choose a program")
+        fileMode: P.FileDialog.OpenFile
+        parentWindow: DccApp.mainWindow()
         nameFilters: [qsTr("All files (*)"), qsTr("Launchers (*.desktop)"), qsTr("AppImage (*.AppImage)")]
-        onAccepted: root.model.setFile(selectedFile)
+        onAccepted: root.model.setFile(file)
     }
 
     DccObject {

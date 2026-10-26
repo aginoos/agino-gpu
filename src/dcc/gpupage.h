@@ -90,7 +90,7 @@ private:
     QVariantList m_paths;
     bool m_pauseOnBattery = true;
     bool m_busy = false;
-    bool m_shown = false;
+    int m_shown = 0; // pages on screen; DCC may create the new one before destroying the old
 };
 
 } // namespace AginoGpu

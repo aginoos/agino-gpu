@@ -25,6 +25,7 @@ public:
     const QList<AppEntry> &entries() const { return m_entries; }
     // Display name and icon for a rule's app id; the id itself when DAM does not know it.
     AppEntry lookup(const QString &appId) const;
+    bool contains(const QString &appId) const;
 
     void reload();
 

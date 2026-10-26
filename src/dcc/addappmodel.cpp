@@ -5,7 +5,10 @@
 
 #include "agino-gpu-client/rulestore.h"
 
+#include "agino-gpu/rules.h"
+
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 
 #include <algorithm>
@@ -143,15 +146,55 @@ void AddAppModel::clearFile()
     Q_EMIT selectionChanged();
 }
 
+namespace {
+
+struct DesktopEntry
+{
+    QString name;
+    QString exec;
+};
+
+// Name= and Exec= of the [Desktop Entry] group (unlocalized; enough to resolve the program).
+DesktopEntry readDesktopEntry(const QString &file)
+{
+    DesktopEntry entry;
+    QFile f(file);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return entry;
+    bool inGroup = false;
+    while (!f.atEnd()) {
+        const QString line = QString::fromUtf8(f.readLine()).trimmed();
+        if (line.startsWith(QLatin1Char('[')))
+            inGroup = line == QLatin1String("[Desktop Entry]");
+        else if (inGroup && line.startsWith(QLatin1String("Name=")) && entry.name.isEmpty())
+            entry.name = line.mid(5);
+        else if (inGroup && line.startsWith(QLatin1String("Exec=")) && entry.exec.isEmpty())
+            entry.exec = line.mid(5);
+    }
+    return entry;
+}
+
+} // namespace
+
 bool AddAppModel::commit()
 {
     QStringList appIds = m_selected.values();
     if (hasFile()) {
         const QFileInfo info(m_file);
-        if (fileIsDesktopEntry())
-            appIds.append(info.completeBaseName());
-        else if (!m_rules->addPath(m_file, info.fileName(), m_createLauncher))
+        const QString id = info.completeBaseName();
+        if (fileIsDesktopEntry() && m_catalog->contains(id)) {
+            appIds.append(id);
+        } else if (fileIsDesktopEntry()) {
+            // DAM does not know this file (outside the application directories): the rule
+            // follows the program it starts instead.
+            const DesktopEntry entry = readDesktopEntry(m_file);
+            const QString program = resolveExecProgram(entry.exec, qEnvironmentVariable("PATH"));
+            if (program.isEmpty()
+                || !m_rules->addPath(program, entry.name.isEmpty() ? id : entry.name, m_createLauncher))
+                return false;
+        } else if (!m_rules->addPath(m_file, info.fileName(), m_createLauncher)) {
             return false;
+        }
     }
     std::sort(appIds.begin(), appIds.end());
     m_rules->addApps(appIds);

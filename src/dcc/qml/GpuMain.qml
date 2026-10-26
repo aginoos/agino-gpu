@@ -10,29 +10,6 @@ import org.deepin.dcc 1.0
 DccObject {
     id: root
 
-    // The entry in Gpu.qml cannot read dccData, so its visibility is bound from here.
-    function bindEntry() {
-        const entry = DccApp.object("gpu")
-        if (!entry)
-            return false
-        entry.visible = Qt.binding(function () { return dccData.multiGpu })
-        return true
-    }
-
-    Component.onCompleted: {
-        if (!bindEntry())
-            retryBind.start()
-    }
-    Timer {
-        id: retryBind
-        interval: 500
-        repeat: true
-        onTriggered: {
-            if (root.bindEntry())
-                stop()
-        }
-    }
-
     component StatusLabel: RowLayout {
         property string kind
         property string text
@@ -175,7 +152,11 @@ DccObject {
             pageType: DccObject.Editor
             page: Switch {
                 checked: dccData.pauseOnBattery
-                onClicked: dccData.pauseOnBattery = checked
+                onClicked: {
+                    dccData.pauseOnBattery = checked
+                    // a click replaces the binding; restore it so later changes show
+                    checked = Qt.binding(function () { return dccData.pauseOnBattery })
+                }
             }
         }
     }

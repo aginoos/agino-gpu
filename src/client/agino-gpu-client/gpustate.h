@@ -30,8 +30,8 @@ public:
 
     const Root &root() const { return m_root; }
     const Hardware &hardware() const { return m_hw; }
-    // false for HardwareClass::Single and for machines without a GPU we manage: the plugins
-    // hide themselves then.
+    // Whether there is a mode to offer (also true in integrated mode, where the discrete GPU is
+    // gone); the plugins hide themselves otherwise.
     bool isMultiGpu() const;
 
     Mode configuredMode() const { return m_configured; }

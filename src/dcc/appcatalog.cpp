@@ -91,6 +91,12 @@ AppCatalog::AppCatalog(QObject *parent)
     reload();
 }
 
+bool AppCatalog::contains(const QString &appId) const
+{
+    return std::any_of(m_entries.cbegin(), m_entries.cend(),
+                       [&appId](const AppEntry &e) { return e.id == appId; });
+}
+
 AppEntry AppCatalog::lookup(const QString &appId) const
 {
     for (const AppEntry &entry : m_entries) {

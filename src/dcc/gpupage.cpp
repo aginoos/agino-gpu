@@ -70,7 +70,8 @@ GpuPage::GpuPage(QObject *parent)
 
 GpuPage::~GpuPage()
 {
-    setPageShown(false);
+    if (m_shown > 0)
+        m_state->setPolling(false);
 }
 
 bool GpuPage::multiGpu() const
@@ -136,10 +137,10 @@ QVariantList GpuPage::modes() const
 
 void GpuPage::setPageShown(bool shown)
 {
-    if (shown == m_shown)
-        return;
-    m_shown = shown;
-    m_state->setPolling(shown);
+    const int before = m_shown;
+    m_shown = qMax(0, m_shown + (shown ? 1 : -1));
+    if ((before == 0) != (m_shown == 0))
+        m_state->setPolling(m_shown > 0);
 }
 
 void GpuPage::onStateChanged()
