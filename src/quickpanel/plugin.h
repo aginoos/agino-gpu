@@ -48,6 +48,5 @@ private:
     AginoGpu::FailureNotifier *m_notifier = nullptr;
     QPointer<AginoGpu::Tile> m_tile;
     QPointer<AginoGpu::Panel> m_panel;
-    QPointer<QWidget> m_placeholder;
     bool m_shown = false;
 };

@@ -28,7 +28,6 @@ AginoGpuPlugin::AginoGpuPlugin(QObject *parent)
 
 AginoGpuPlugin::~AginoGpuPlugin()
 {
-    delete m_placeholder;
     delete m_tile;
     delete m_panel;
 }
@@ -97,12 +96,7 @@ QWidget *AginoGpuPlugin::itemWidget(const QString &itemKey)
         }
         return m_tile;
     }
-    if (itemKey == kItemKey) {
-        // Never shown (no tray icon); the dock still asks for a widget.
-        if (!m_placeholder)
-            m_placeholder = new QWidget;
-        return m_placeholder;
-    }
+    // No widget for kItemKey: dde-tray-loader then creates no tray icon (D-141, quick panel only).
     return nullptr;
 }
 
@@ -112,8 +106,10 @@ QWidget *AginoGpuPlugin::itemPopupApplet(const QString &itemKey)
         return nullptr;
     if (!m_panel) {
         m_panel = new Panel(m_state);
+        // Closing goes through the quick-panel item: dde-tray-loader looks up the window of
+        // itemWidget(key) to close the panel, and kItemKey has no widget.
         connect(m_panel, &Panel::requestHide, this,
-                [this] { m_proxyInter->requestSetAppletVisible(this, kItemKey, false); });
+                [this] { m_proxyInter->requestSetAppletVisible(this, Dock::QUICK_ITEM_KEY, false); });
     }
     return m_panel;
 }
