@@ -166,17 +166,18 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ### 5.2 规则存储
 
-- 规则是用户级的：用户 DConfig `org.agino.gpu`（appid `agino-gpu`）。两种规则：
-  - 按应用（`appRules`）：`[{ "appId": "steam", "gpu": "discrete" }]`，来自系统里的应用（DAM 的应用列表），或用户浏览选中的 `.desktop` 文件。
-  - 按文件（`pathRules`）：`[{ "path": "/home/u/Games/x/game.x86_64", "gpu": "discrete", "launcherEntry": "agino-gpu-<hash>.desktop" }]`，来自控制中心“浏览…”选中的可执行文件、AppImage 或脚本（D-141 补充：允许用户浏览文件指定应用，不只读系统已安装的应用）。路径存规范化后的绝对路径；文件被移动或删除时规则在界面上标“文件不存在”，不自动删除。
+- 规则是用户级的：用户 DConfig `org.agino.gpu`（appid `agino-gpu`，定义文件 `data/dconfig/org.agino.gpu.json`），键 `rules` 存一个 JSON（`rules.h` 的 `RuleSet`：`{"version":1,"apps":[{"appId":"steam"}],"paths":[{"path":"…","launcherEntry":"agino-gpu-<hash>.desktop"}],"pauseOnBattery":true}`）。两种规则：
+  - 按应用（`apps`）：来自系统里的应用（DAM 的应用列表），或用户浏览选中的 `.desktop` 文件（应用标识取文件名去掉 `.desktop`）。
+  - 按文件（`paths`）：来自控制中心“选择文件…”选中的可执行文件、AppImage 或脚本（D-141 补充：允许用户浏览文件指定应用，不只读系统已安装的应用）。路径存规范化后的绝对路径；文件被移动或删除时规则在界面上标“文件不存在”，不自动删除。
+  - 同一 DConfig 的其他键由客户端库维护（P2 实现）：`effectivePaths`（此刻生效的按文件规则路径；不在混合模式或因电池暂停时为空，DAM 补丁只读这个键，不解析 JSON、不判断电源），`appliedApps` / `appliedEnvironment`（哪些应用的 DAM 配置里有我们写的项、写的是哪些，用于之后准确删除），`dismissedFailure`（用户已关闭的切换失败通知）。
 - 规则落到 DAM：对每个 `gpu=discrete` 的应用，把 5.1 的变量写进 DAM 的 DConfig `org.deepin.dde.application-manager` 子路径 `/<appid>` 的 `appExtraEnvironments`，并在同一列表里加一个标记项 `AGINO_GPU_RULE=1`，用来区分我们写的和用户/其他程序写的；删除规则时只删除我们写的那些项。
 - 按文件的规则不写 DAM 的按应用配置（没有应用标识），由 DAM 补丁在启动时匹配（5.3 第 1 条）。用户勾选“在启动器里创建入口”时，在 `~/.local/share/applications/` 写一个 `agino-gpu-<路径哈希>.desktop`（`Exec` 指向该文件，`Name` 默认取文件名、可改），删除规则时一并删除；入口只是方便启动，规则本身靠路径匹配生效。
-- 电池策略：一个整组开关 `pauseOnBattery`（布尔，默认开），不按条设置（草案 3 简化）。开着时，切到电池供电由客户端库把所有规则项从 DAM 里拿掉（按文件的规则在匹配时跳过），接上电源后恢复。执行者是快捷面板插件（随 dde-tray-loader 在登录时加载并常驻，不需要用户打开面板）；插件被禁用时电池策略不生效（在本文记录，界面上不另加说明）。
+- 电池策略：一个整组开关 `pauseOnBattery`（布尔，默认开），不按条设置（草案 3 简化）。开着时，切到电池供电由客户端库（`DamRuleSync`，电源状态取自 UPower 的 `OnBattery`）把所有规则项从 DAM 里拿掉并清空 `effectivePaths`，接上电源后恢复。执行者是快捷面板插件（随 dde-tray-loader 在登录时加载并常驻，不需要用户打开面板）；控制中心插件打开时也运行同一个同步，使改动不依赖快捷面板立即生效（同步是幂等的）；插件被禁用时电池策略不生效（在本文记录，界面上不另加说明）。
 - 内置推荐规则（`/usr/share/agino-gpu/default-rules.json`，例如 Steam、Blender、DaVinci Resolve），用户可关。第一期默认不启用任何规则，只在界面上作为“推荐”列出。
 
 ### 5.3 三个入口
 
-1. **`.desktop` 声明**：DAM 补丁在 `ApplicationService::appendExtraEnvironments`（dde-application-manager 1.2.59，`src/dbus/applicationservice.cpp:113-155`）里，DConfig 合并之后、追加 `DSG_APP_ID` 之前：桌面文件 `PrefersNonDefaultGPU=true` 或 `X-KDE-RunOnDiscreteGpu=true`，且 `/run/agino-gpu/offload.env` 存在时，追加其中的变量。同一处再做按文件匹配：把桌面文件 `Exec` 的程序解析为绝对路径（`realpath`），与用户 DConfig `org.agino.gpu` 的 `pathRules` 比较，命中则同样追加。补丁不链接 agino-gpu，只读这个文件和 DConfig，文件不存在则什么也不做。按文件的规则因此对“从启动器、任务栏或任何 `Exec` 指向这个文件的桌面入口启动”生效；在文件管理器里双击可执行文件、或在终端直接运行时不经过 DAM，不生效（终端里用 `agino-gpu-run`），界面上写明。
+1. **`.desktop` 声明**：DAM 补丁在 `ApplicationService::appendExtraEnvironments`（dde-application-manager 1.2.59，`src/dbus/applicationservice.cpp:113-155`）里，DConfig 合并之后、追加 `DSG_APP_ID` 之前：桌面文件 `PrefersNonDefaultGPU=true` 或 `X-KDE-RunOnDiscreteGpu=true`，且 `/run/agino-gpu/offload.env` 存在时，追加其中的变量。同一处再做按文件匹配：把桌面文件 `Exec` 的程序解析为绝对路径（`realpath`），与用户 DConfig `org.agino.gpu` 的 `effectivePaths` 比较，命中则同样追加。补丁不链接 agino-gpu，只读这个文件和 DConfig，文件不存在则什么也不做。按文件的规则因此对“从启动器、任务栏或任何 `Exec` 指向这个文件的桌面入口启动”生效；在文件管理器里双击可执行文件、或在终端直接运行时不经过 DAM，不生效（终端里用 `agino-gpu-run`），界面上写明。
 2. **右键“使用独立显卡运行”**（仅本次）：
    - 启动器 dde-launchpad 2.0.45：`qml/AppItemMenu.qml` 在“打开”后加菜单项；`DesktopIntegration` 加 `launchByDesktopIdWithEnv(desktopId, env)`；`AppMgr::launchApp` 增加 env 参数，给 `dde-am` 追加 `--env K=V`。
    - 任务栏 dde-shell 2.0.52：`panels/dock/taskmanager/globals.h` 加 `DOCK_ACTION_RUN_DGPU`；`DockGlobalElementModel::getMenus` 加菜单项；`requestNewInstance` 处理它，同样用 `dde-am --env`。
@@ -225,7 +226,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 | `SetMode(s mode, a{sv} options)` | `org.agino.gpu.set-mode`：活动本地会话的管理员 `auth_admin_keep` | `options.force`(b) 用于确认警告 |
 | `GetDgpuUsers() → a(uus)` | 无 | 打开了独显设备节点的进程（pid、uid、名字）；只返回调用者自己的进程，管理员授权后返回全部 |
 
-客户端库同时提供 `Gpu1` 不运行时的降级：只读 sysfs 显示状态，不能切换。
+客户端库（`src/client`，P2）的状态不经过 daemon：`GpuState` 自己检测硬件、监视 `/etc/agino-gpu`、`/run/agino-gpu`、`/var/lib/agino-gpu` 三个目录（文件按改名方式替换，所以监视目录），独显运行状态只在界面可见时每 2 秒读一次；只有 `CheckMode`/`SetMode`/`GetDgpuUsers` 走 D-Bus（会按需激活 daemon）。daemon 不可用时界面照常显示状态，切换报错。
 
 ### 6.3 文件
 
@@ -279,7 +280,8 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 ```
 agino-gpu/
 ├── CMakeLists.txt
-├── src/lib/                 # libagino-gpu（检测、sysfs、环境变量、规则、D-Bus 客户端）
+├── src/lib/                 # libagino-gpu（检测、sysfs、环境变量、规则数据、D-Bus 线路类型）
+├── src/client/              # libagino-gpu-client（两个插件共用：状态、D-Bus 调用、规则存储、DAM 同步、电源、界面文字）
 ├── src/daemon/              # agino-gpud、agino-gpu-apply、display-setup、integrated-remove
 ├── src/run/                 # agino-gpu-run
 ├── src/quickpanel/          # 快捷面板插件
@@ -290,7 +292,7 @@ agino-gpu/
 ```
 
 - C++17（与 Qt 6.8 和 DTK 一致），Qt6 Core/DBus（daemon 不链接 Gui），插件用 DTK6 Widget / Qt Quick。
-- `libagino-gpu` 是静态库（位置无关代码），链接进 daemon、工具和两个插件，不安装、没有公开 ABI。polkit 授权直接调用 `org.freedesktop.PolicyKit1` 的 D-Bus 接口，不依赖 polkit-qt。
+- `libagino-gpu` 是静态库（位置无关代码），链接进 daemon、工具和两个插件，不安装、没有公开 ABI。`libagino-gpu-client` 同样是静态库，只给两个插件用，另外链接 DTK Core（DConfig）；两个插件共用的界面文字在其中（翻译上下文 `AginoGpu`，安装到 `/usr/share/agino-gpu/translations/`）。polkit 授权直接调用 `org.freedesktop.PolicyKit1` 的 D-Bus 接口，不依赖 polkit-qt。
 - 一个二进制包 `agino-gpu`（daemon、apply、run、库、系统文件、快捷面板插件、控制中心插件），直接依赖 dde-tray-loader、dde-control-center、dde-application-manager 等 DDE 组件：它只为 agino 而做，不拆“通用服务 + DDE 插件”（D-141 补充）。agino-desktop-dde 加 Recommends。
 - 打包按 D-42：本仓库打标签（无 `v` 前缀），infra 加 `packages/agino-gpu/seed.json`。DAM、dde-launchpad、dde-shell 的补丁放 infra 各自的移植包，提版本。
 
