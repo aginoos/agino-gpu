@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.agino.Gpu1
+Exec=@AGINO_GPU_LIBEXECDIR@/agino-gpud
+User=root
+SystemdService=agino-gpud.service

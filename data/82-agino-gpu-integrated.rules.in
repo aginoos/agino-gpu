@@ -1,0 +1,4 @@
+# agino-gpu: in integrated mode the discrete GPU and its functions are removed from the PCI bus
+# before a driver binds. The helper checks the saved mode itself and does nothing otherwise.
+# The NVIDIA runtime PM rule lives in agino-kernel-config, not here.
+ACTION=="add", SUBSYSTEM=="pci", ATTR{class}=="0x03*|0x0403*", RUN+="@AGINO_GPU_LIBEXECDIR@/agino-gpu-integrated-remove %k"

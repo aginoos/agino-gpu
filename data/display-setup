@@ -1,0 +1,22 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# lightdm display-setup-script (design.md §4.3). In dedicated mode the NVIDIA GPU renders and
+# the panel stays on the integrated GPU, so connect the two with reverse PRIME. Every other
+# mode: nothing to do. Never fails the login.
+
+ROOT="${AGINO_GPU_ROOT:-}"
+
+grep -qx 'active=dedicated' "$ROOT/run/agino-gpu/state" 2>/dev/null || exit 0
+
+has_nvidia=0
+for dev in "$ROOT"/sys/bus/pci/devices/*; do
+    [ -r "$dev/vendor" ] && [ -r "$dev/class" ] || continue
+    case "$(cat "$dev/vendor" 2>/dev/null):$(cat "$dev/class" 2>/dev/null)" in
+        0x10de:0x03*) has_nvidia=1; break ;;
+    esac
+done
+[ "$has_nvidia" = 1 ] || exit 0
+
+xrandr --setprovideroutputsource modesetting NVIDIA-0 || true
+xrandr --auto || true
+exit 0

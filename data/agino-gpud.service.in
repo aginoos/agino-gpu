@@ -1,0 +1,11 @@
+[Unit]
+Description=agino GPU mode service
+
+[Service]
+Type=dbus
+BusName=org.agino.Gpu1
+ExecStart=@AGINO_GPU_LIBEXECDIR@/agino-gpud
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+# No ProtectSystem: the daemon writes /etc/agino-gpu, /etc/X11/xorg.conf.d and /etc/modprobe.d.
