@@ -54,6 +54,20 @@ std::optional<quint32> readUid(const Root &root, const QString &procDir)
     return std::nullopt;
 }
 
+// The kernel cuts comm to TASK_COMM_LEN - 1 characters ("dde-control-cen"); when it is that
+// long and the executable's file name continues it, show the file name instead.
+QString processName(const Root &root, const QString &procDir)
+{
+    constexpr int kCommMax = 15;
+    const QString comm = root.readTrimmed(procDir + QStringLiteral("/comm")).value_or(QString());
+    if (comm.size() < kCommMax)
+        return comm;
+    QString exe = root.linkTarget(procDir + QStringLiteral("/exe"));
+    exe.remove(QStringLiteral(" (deleted)"));
+    const QString base = exe.mid(exe.lastIndexOf(QLatin1Char('/')) + 1);
+    return base.startsWith(comm) ? base : comm;
+}
+
 } // namespace
 
 QList<GpuUser> findGpuUsers(const Root &root, const Gpu &gpu, std::optional<quint32> onlyUid)
@@ -89,7 +103,7 @@ QList<GpuUser> findGpuUsers(const Root &root, const Gpu &gpu, std::optional<quin
         GpuUser user;
         user.pid = pid;
         user.uid = *uid;
-        user.name = root.readTrimmed(procDir + QStringLiteral("/comm")).value_or(QString());
+        user.name = processName(root, procDir);
         users.append(user);
     }
     std::sort(users.begin(), users.end(), [](const GpuUser &a, const GpuUser &b) { return a.pid < b.pid; });

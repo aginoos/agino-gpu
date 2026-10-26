@@ -37,20 +37,23 @@ private Q_SLOTS:
         QCOMPARE(dgpu.vendor, Vendor::Nvidia);
 
         const QList<GpuUser> users = findGpuUsers(root, dgpu);
-        // 101: renderD129 (the dGPU's render node), 102: /dev/nvidia*, 103: card1 + nvidia-modeset
-        QCOMPARE(pids(users), (QList<quint32>{101, 102, 103}));
+        // 101: renderD129 (the dGPU's render node), 102: /dev/nvidia*, 103: card1 + nvidia-modeset,
+        // 106: /dev/nvidia0
+        QCOMPARE(pids(users), (QList<quint32>{101, 102, 103, 106}));
         QCOMPARE(users.at(0).name, QStringLiteral("firefox"));
         QCOMPARE(users.at(0).uid, quint32(1000));
         QCOMPARE(users.at(1).name, QStringLiteral("python3"));
         QCOMPARE(users.at(2).name, QStringLiteral("Xorg"));
         QCOMPARE(users.at(2).uid, quint32(0));
+        // comm is cut to 15 characters; the executable's file name gives the full one
+        QCOMPARE(users.at(3).name, QStringLiteral("dde-control-center"));
     }
 
     void onlyUidFilter()
     {
         const Root root = fixtureRoot();
         const Gpu &dgpu = *detectHardware(root).discreteGpu();
-        QCOMPARE(pids(findGpuUsers(root, dgpu, quint32(1000))), (QList<quint32>{101, 102}));
+        QCOMPARE(pids(findGpuUsers(root, dgpu, quint32(1000))), (QList<quint32>{101, 102, 106}));
         QCOMPARE(pids(findGpuUsers(root, dgpu, quint32(0))), QList<quint32>{103});
         QVERIFY(findGpuUsers(root, dgpu, quint32(4242)).isEmpty());
         // 104 only has the integrated card open
