@@ -325,9 +325,9 @@ agino-gpu/
 | V-2 | agino 的 initramfs 是否带 nvidia 模块 | 分析（2026-10-26）：不需要 `update-initramfs`。initramfs 里旧的 modprobe 配置最多让 nvidia 在 initramfs 阶段加载不了，切到真实根文件系统后照常加载；反过来若 nvidia 已在 initramfs 里加载，移除 PCI 设备时内核先解绑驱动。仍要在 157 上用 `lsinitramfs` 核实 |
 | V-3 | 157 移除 PCI 设备 / `dgpu_disable` 后的功耗 | `integrated` 的实际价值 |
 | V-4 | 反向 PRIME 下 dde-daemon 显示服务和 KWin 的表现 | `dedicated` 可用性 |
-| V-5 | NVIDIA EGL 在 X11 按需渲染下是否正常 | Chromium/Electron 走 EGL 还是 Vulkan |
+| V-5 | NVIDIA EGL 在 X11 按需渲染下是否正常 | 2026-10-26 在 105（RTX 5080，驱动 580.178.04，Chromium 156）上测：`eglinfo -p x11` 带 5.1 的变量时 EGL 厂商为 NVIDIA、渲染器 RTX 5080，Firefox（EGL）P2 已实测在独显上；**Chromium 默认的 ANGLE-GL 失败**（`ANGLE Display::initialize error 12289: Invalid visual ID requested`，GPU 进程反复退出后整页软件渲染，独显照样被唤醒）。加 `--use-angle=vulkan --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan` 后正常（`GL_RENDERER = ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA GeForce RTX 5080 …))`，各项硬件加速）；只加 `--use-angle=vulkan` 不够。Debian 的 `/usr/bin/chromium` 开头把 `CHROMIUM_FLAGS` 置空，环境变量传不进去，只能经 `/etc/chromium.d/` 片段或命令行参数。Vulkan：带变量时 NVIDIA 排第一，但 `__VK_LAYER_NV_optimus=NVIDIA_only` 没有隐藏集显和 llvmpipe |
 | V-6 | `flatpak run` 是否把这些变量带进沙箱 | Flatpak 方案 |
-| V-7 | agino 源里 NVIDIA 用户态库有没有 i386 | Steam 32 位游戏 |
+| V-7 | agino 源里 NVIDIA 用户态库有没有 i386 | 没有：aginoos-unstable 和 milkyway 只发布 `all amd64 source`（2026-10-26）。用户指出 Steam 有原生 64 位测试版，不需要 i386 即可安装运行 |
 | V-8 | 快捷面板插件能否只靠 dde-tray-loader-dev 树外编译 | 构建方式 |
 | V-10 | 两格磁贴点击后在面板内展开下级页面的接口（`itemPopupApplet` + `requestSetAppletVisible`）在 dde-shell 2.0.52 上的行为 | 快捷面板下级页面 |
 | V-11 | DAM 补丁按 `Exec` 程序路径匹配的可靠性（带参数、`env` 前缀、AppImage、脚本解释器） | 按文件的规则 |
