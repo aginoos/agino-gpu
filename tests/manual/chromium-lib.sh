@@ -21,10 +21,13 @@ start_program() {
     done
 }
 
-# The browser/main processes carry the DevTools switch and no --type=.
+# The browser/main processes carry the DevTools switch as an argument of its own (not e.g. inside a
+# shell's -c script, which pgrep -f also matches) and no --type=.
 main_pids() {
     for _p in $(pgrep -f -- "--remote-debugging-port=$port"); do
-        tr '\0' '\n' <"/proc/$_p/cmdline" 2>/dev/null | grep -q -- '--type=' || echo "$_p"
+        _args=$(tr '\0' '\n' <"/proc/$_p/cmdline" 2>/dev/null)
+        echo "$_args" | grep -qx -- "--remote-debugging-port=$port" || continue
+        echo "$_args" | grep -q -- '--type=' || echo "$_p"
     done
 }
 
@@ -42,10 +45,15 @@ any_alive() {
     return 1
 }
 
-# Ends exactly the main processes (never pkill -f) and waits up to 10 s for them to exit.
+# Ends exactly the main processes (never pkill -f) and waits up to 10 s for them to exit. A main process
+# whose parent is also one is left alone: in an AppImage that is the runtime's FUSE child (same command
+# line), which unmounts once the app exits; killing it first makes the exiting app die of SIGBUS.
 close_program() {
     _mains=$(main_pids)
-    for _m in $_mains; do kill "$_m" 2>/dev/null; done
+    for _m in $_mains; do
+        _pp=$(ps -o ppid= -p "$_m" | tr -d ' ')
+        case " $(echo $_mains) " in *" $_pp "*) ;; *) kill "$_m" 2>/dev/null ;; esac
+    done
     _i=0
     # shellcheck disable=SC2086 # a list of PIDs
     while [ $_i -lt 20 ] && any_alive $_mains; do sleep 0.5; _i=$((_i + 1)); done
