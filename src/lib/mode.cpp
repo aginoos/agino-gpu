@@ -88,6 +88,14 @@ QList<Mode> supportedModes(const Hardware &hw)
     return {};
 }
 
+QList<Mode> offeredModes(const Hardware &hw, Mode active)
+{
+    QList<Mode> modes = supportedModes(hw);
+    if (modes.isEmpty() && !hw.discreteGpu() && active == Mode::Integrated)
+        modes = {Mode::Hybrid, Mode::Integrated};
+    return modes;
+}
+
 PendingAction pendingAction(Mode configured, Mode active)
 {
     if (configured == active)

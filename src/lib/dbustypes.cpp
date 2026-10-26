@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "dbustypes.h"
+#include "agino-gpu/dbustypes.h"
 
 #include <QDBusMetaType>
 #include <QList>

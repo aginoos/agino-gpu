@@ -3,7 +3,7 @@
 // exits after 60 s without incoming calls.
 
 #include "agino-gpu/root.h"
-#include "dbustypes.h"
+#include "agino-gpu/dbustypes.h"
 #include "gpuservice.h"
 
 #include <QCoreApplication>

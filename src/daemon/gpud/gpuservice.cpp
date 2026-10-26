@@ -88,10 +88,7 @@ Mode GpuService::activeMode() const
 
 QList<Mode> GpuService::offeredModes(const Hardware &hw) const
 {
-    QList<Mode> modes = supportedModes(hw);
-    if (modes.isEmpty() && !hw.discreteGpu() && activeMode() == Mode::Integrated)
-        modes = {Mode::Hybrid, Mode::Integrated};
-    return modes;
+    return AginoGpu::offeredModes(hw, activeMode());
 }
 
 // ---- properties -------------------------------------------------------------------------

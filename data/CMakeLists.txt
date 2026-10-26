@@ -38,3 +38,8 @@ install(PROGRAMS display-setup DESTINATION "${AGINO_GPU_LIBEXECDIR}")
 # Directories the hardened agino-gpud.service lists in ReadWritePaths= (they must exist).
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/agino-gpu")
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/X11/xorg.conf.d")
+
+# User DConfig of the rules (read by the plugins and the DAM patch)
+if(AGINO_GPU_BUILD_PLUGINS)
+    install(FILES dconfig/org.agino.gpu.json DESTINATION "${CMAKE_INSTALL_DATADIR}/dsg/configs/agino-gpu")
+endif()

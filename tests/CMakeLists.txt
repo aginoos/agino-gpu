@@ -9,3 +9,16 @@ foreach(src ${AGINO_GPU_LIB_TESTS})
         AGINO_GPU_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
     add_test(NAME ${name} COMMAND ${name})
 endforeach()
+
+# tests/client/tst_*.cpp: the pure parts of the client library (no DConfig, no bus).
+if(AGINO_GPU_BUILD_PLUGINS)
+    file(GLOB AGINO_GPU_CLIENT_TESTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/client/tst_*.cpp)
+    foreach(src ${AGINO_GPU_CLIENT_TESTS})
+        get_filename_component(name ${src} NAME_WE)
+        add_executable(${name} ${src})
+        target_link_libraries(${name} PRIVATE agino-gpu-client Qt6::Test)
+        target_compile_definitions(${name} PRIVATE
+            AGINO_GPU_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+        add_test(NAME ${name} COMMAND ${name})
+    endforeach()
+endif()

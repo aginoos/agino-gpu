@@ -4,7 +4,7 @@
 #include "agino-gpu/mode.h"
 #include "agino-gpu/root.h"
 #include "agino-gpu/types.h"
-#include "dbustypes.h"
+#include "agino-gpu/dbustypes.h"
 
 #include <QDBusContext>
 #include <QDBusMessage>

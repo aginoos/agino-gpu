@@ -1,0 +1,51 @@
+{
+    "magic": "dsg.config.meta",
+    "version": "1.0",
+    "contents": {
+        "rules": {
+            "value": "",
+            "serial": 0,
+            "flags": [],
+            "name": "Discrete GPU rules",
+            "description": "JSON rule set: apps and files that always run on the discrete GPU, and whether the rules pause on battery",
+            "permissions": "readwrite",
+            "visibility": "private"
+        },
+        "effectivePaths": {
+            "value": [],
+            "serial": 0,
+            "flags": [],
+            "name": "Path rules in force",
+            "description": "Canonical executable paths that launch on the discrete GPU right now; read by dde-application-manager",
+            "permissions": "readwrite",
+            "visibility": "private"
+        },
+        "appliedApps": {
+            "value": [],
+            "serial": 0,
+            "flags": [],
+            "name": "Applied app rules",
+            "description": "App ids whose dde-application-manager environment carries agino-gpu entries",
+            "permissions": "readwrite",
+            "visibility": "private"
+        },
+        "appliedEnvironment": {
+            "value": [],
+            "serial": 0,
+            "flags": [],
+            "name": "Applied environment",
+            "description": "The environment entries agino-gpu added to those apps",
+            "permissions": "readwrite",
+            "visibility": "private"
+        },
+        "dismissedFailure": {
+            "value": "",
+            "serial": 0,
+            "flags": [],
+            "name": "Dismissed failure",
+            "description": "Last GPU mode failure the user dismissed",
+            "permissions": "readwrite",
+            "visibility": "private"
+        }
+    }
+}

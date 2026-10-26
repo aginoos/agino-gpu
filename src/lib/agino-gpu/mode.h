@@ -17,6 +17,9 @@ QString pendingActionToString(PendingAction a);
 
 // design.md §2 table / §3.3: which modes the UI may offer on this hardware. Single -> none.
 QList<Mode> supportedModes(const Hardware &hw);
+// What the daemon and the UI offer: supportedModes(), plus the hybrid/integrated pair when the
+// discrete GPU is already gone because the active mode is integrated.
+QList<Mode> offeredModes(const Hardware &hw, Mode active);
 
 // design.md §3.2 rules 1–3: what the user must do for `configured` to take effect when
 // `active` is running. Anything into or out of MuxDedicated is a reboot; Integrated is a

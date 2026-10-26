@@ -4,15 +4,13 @@ set(AGINO_GPU_DAEMON_COMMON_DIR "${CMAKE_CURRENT_SOURCE_DIR}/common")
 
 add_executable(agino-gpud
     gpud/main.cpp
-    gpud/dbustypes.h
-    gpud/dbustypes.cpp
     gpud/polkit.h
     gpud/polkit.cpp
     gpud/gpuservice.h
     gpud/gpuservice.cpp
 )
 target_include_directories(agino-gpud PRIVATE "${AGINO_GPU_DAEMON_COMMON_DIR}" gpud)
-target_link_libraries(agino-gpud PRIVATE agino-gpu Qt6::Core Qt6::DBus)
+target_link_libraries(agino-gpud PRIVATE agino-gpu agino-gpu-dbus Qt6::Core Qt6::DBus)
 
 add_executable(agino-gpu-apply apply/main.cpp)
 target_include_directories(agino-gpu-apply PRIVATE "${AGINO_GPU_DAEMON_COMMON_DIR}")
