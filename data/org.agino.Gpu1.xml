@@ -1,0 +1,33 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.agino.Gpu1">
+    <property name="HardwareClass" type="s" access="read"/>
+    <property name="Gpus" type="aa{sv}" access="read">
+      <!-- keys: Id, Name, Vendor, PciAddress, Driver (s); Discrete, BootVga, Removable,
+           RuntimePmSupported (b); ConnectedOutputs (as) -->
+    </property>
+    <property name="SupportedModes" type="as" access="read"/>
+    <property name="ConfiguredMode" type="s" access="read"/>
+    <property name="ActiveMode" type="s" access="read"/>
+    <property name="PendingAction" type="s" access="read"/>
+    <property name="LastFailure" type="s" access="read"/>
+    <property name="OffloadEnvironment" type="as" access="read"/>
+
+    <!-- Returns (level, "code: message") pairs; level is info, warning or error. -->
+    <method name="CheckMode">
+      <arg name="mode" type="s" direction="in"/>
+      <arg name="results" type="a(ss)" direction="out"/>
+    </method>
+    <!-- options: force (b) confirms warnings. Errors: org.agino.Gpu1.Error.Refused,
+         NeedsConfirmation, NotAuthorized, Failed. -->
+    <method name="SetMode">
+      <arg name="mode" type="s" direction="in"/>
+      <arg name="options" type="a{sv}" direction="in"/>
+    </method>
+    <!-- (pid, uid, name) of processes that have the discrete GPU open. -->
+    <method name="GetDgpuUsers">
+      <arg name="users" type="a(uus)" direction="out"/>
+    </method>
+  </interface>
+</node>

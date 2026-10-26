@@ -1,0 +1,14 @@
+[Unit]
+Description=Apply the saved agino GPU mode for this boot
+After=systemd-udevd.service systemd-modules-load.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=@AGINO_GPU_LIBEXECDIR@/agino-gpu-apply
+TimeoutStartSec=30
+
+[Install]
+# graphical.target pulls in display-manager.service; Before= above orders us ahead of it.
+WantedBy=graphical.target
