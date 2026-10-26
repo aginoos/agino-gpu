@@ -1,6 +1,6 @@
 # agino-gpu 设计文档
 
-版本：草案 1（2026-10-26）。决策来源：agino infra `docs/decisions.md` D-140。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
+版本：草案 1（2026-10-26）。决策来源：agino infra `docs/decisions.md` D-141。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
 
 ## 1. 目标与范围
 
@@ -44,7 +44,7 @@ daemon 启动时分类，界面和可选模式都由分类决定。
 | AMD 独显 | amdgpu（Mesa） | `DRI_PRIME=pci-XXXX_XX_XX_X`，Vulkan 用 `MESA_VK_DEVICE_SELECT` | amdgpu 默认 runpm |
 | Intel 独显（Arc） | i915/xe（Mesa） | 同 AMD | 驱动默认 |
 
-AMD、Intel 独显、台式机、eGPU：先按本文实现，**有设备后再测**，在此之前测试记录标“未在真机验证”（D-140 第 7 条）。
+AMD、Intel 独显、台式机、eGPU：先按本文实现，**有设备后再测**，在此之前测试记录标“未在真机验证”（D-141 第 7 条）。
 
 ## 3. 模式与状态机
 
@@ -179,7 +179,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
    - 两处都只在 `offload.env` 存在时显示菜单项，env 也从该文件读取。
 3. **按应用规则**：控制中心和托盘的“始终用独显”，见 5.2。
 
-### 5.4 应用兼容（D-140 第 8 条）
+### 5.4 应用兼容（D-141 第 8 条）
 
 兼容配置放在 `/usr/share/agino-gpu/profiles/*.json`，按 desktop id、可执行文件名或特征（如 Electron）匹配，内容是“额外的环境变量 / 额外的启动参数 / 前置检查”。只由 `agino-gpu-run` 和 DAM 规则使用，不改应用自己的文件。
 
@@ -236,7 +236,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 | `/etc/lightdm/lightdm.conf.d/90-agino-gpu.conf` | 包（静态） | 指向 display-setup 脚本，脚本按模式决定是否动作 |
 | `/usr/lib/udev/rules.d/80-agino-gpu.rules` | 包（静态） | 运行时休眠（6.4）和 integrated 移除（6.1） |
 
-### 6.4 运行时休眠（前置任务，在 infra 里做，D-140 第 6 条）
+### 6.4 运行时休眠（前置任务，在 infra 里做，D-141 第 6 条）
 
 - 现状（kernel-graphics-hardware.md 10.16）：tlp 由 deepin-power-control 的模板把 `RUNTIME_PM_ON_AC/BAT` 写死为 `on`；手动打开后独显每分钟被唤醒 18～22 秒，电池多耗 7～8 W。
 - 前置任务要做到：(1) tlp 不再强制 NVIDIA 设备为 `on`（改 deepin-power-control 模板或用 `RUNTIME_PM_DENYLIST` 之外的方式，在 infra 决定）；(2) 找出并消除反复唤醒的来源；(3) 157 电池实测：休眠时功耗低于强制唤醒。
@@ -247,6 +247,8 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 托盘和控制中心只读：`/sys/bus/pci/devices/<addr>/power/runtime_status`、`power/runtime_suspended_time`、`/sys/class/drm/card*/status`、`/proc/*/fd` 的链接目标（判断谁打开了 `/dev/nvidia*` 或独显的 `renderD*`）。禁止调用 `nvidia-smi`、`xrandr --listproviders`、`vulkaninfo`、`glxinfo`、打开独显设备节点。轮询：托盘图标每 10 秒、弹窗打开时每 2 秒；`runtime_status` 变化没有 uevent，只能轮询，读一个 sysfs 文件的代价可以忽略。
 
 ## 7. 界面
+
+界面设计稿：[docs/ui/agino-gpu-ui.html](ui/agino-gpu-ui.html)（浏览器直接打开，可切换场景演示各种状态）。设计稿经用户同意后才开始实现（D-141 补充）。
 
 ### 7.1 托盘插件（dde-tray-loader 2.0.38，`PluginsItemInterfaceV2`）
 
@@ -270,7 +272,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ```
 agino-gpu/
-├── CMakeLists.txt           # 选项：AGINO_GPU_BUILD_TRAY / _DCC（插件依赖 DDE 开发包，可关）
+├── CMakeLists.txt
 ├── src/lib/                 # libagino-gpu（检测、sysfs、环境变量、规则、D-Bus 客户端）
 ├── src/daemon/              # agino-gpud、agino-gpu-apply、display-setup、integrated-remove
 ├── src/run/                 # agino-gpu-run
@@ -282,7 +284,7 @@ agino-gpu/
 ```
 
 - C++17（与 Qt 6.8 和 DTK 一致），Qt6 Core/DBus（daemon 不链接 Gui），插件用 DTK6 Widget / Qt Quick。
-- 二进制包：`agino-gpu`（daemon、apply、run、库、系统文件，依赖 switcheroo-control 以外不依赖 DDE）、`agino-gpu-dde`（两个插件，依赖 dde-tray-loader、dde-control-center）。agino-desktop-dde 加 Recommends。
+- 一个二进制包 `agino-gpu`（daemon、apply、run、库、系统文件、托盘插件、控制中心插件），直接依赖 dde-tray-loader、dde-control-center、dde-application-manager 等 DDE 组件：它只为 agino 而做，不拆“通用服务 + DDE 插件”（D-141 补充）。agino-desktop-dde 加 Recommends。
 - 打包按 D-42：本仓库打标签（无 `v` 前缀），infra 加 `packages/agino-gpu/seed.json`。DAM、dde-launchpad、dde-shell 的补丁放 infra 各自的移植包，提版本。
 
 ## 9. 测试
