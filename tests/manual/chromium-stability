@@ -1,0 +1,36 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# chromium-stability [--gpu-run] SECONDS VIDEO BROWSER [ARGS...]
+# Plays VIDEO in a loop next to a WebGL 2 animation (chromium-stability.html) in a Chromium-based
+# browser with a fresh profile for SECONDS, sampling every 30 s, and reports GPU-process restarts,
+# dropped video frames, the WebGL frame rate, the video decoder, GPU-process trouble in the log, the
+# dGPU state while running and how long it takes to suspend after closing. --gpu-run starts the browser
+# through agino-gpu-run (design.md 5.4). CHROMIUM_STABILITY_WEBGL=0 plays the video alone. A test
+# video can be made with e.g.
+#   ffmpeg -f lavfi -i testsrc2=size=1920x1080:rate=30 -t 30 -c:v libx264 -pix_fmt yuv420p test.mp4
+# Run by hand.
+set -u
+run=
+[ "${1:-}" = --gpu-run ] && { run=/usr/bin/agino-gpu-run; shift; }
+[ $# -ge 3 ] || { echo "usage: $0 [--gpu-run] SECONDS VIDEO BROWSER [ARGS...]" >&2; exit 2; }
+seconds=$1 video=$(readlink -f "$2"); shift 2
+here=$(dirname "$(readlink -f "$0")")
+. "$here/chromium-lib.sh"
+port=${CHROMIUM_GPU_PROBE_PORT:-9341}
+log=$(mktemp)
+profile=$(mktemp -d)
+nowebgl=
+[ "${CHROMIUM_STABILITY_WEBGL:-1}" = 0 ] && nowebgl=?nowebgl
+
+# shellcheck disable=SC2086 # run is empty or one word
+start_program "$log" $run "$@" --user-data-dir="$profile" --no-first-run --no-default-browser-check \
+    --autoplay-policy=no-user-gesture-required "file://$here/chromium-stability.html${nowebgl}#file://$video" ||
+    { rm -rf "$log" "$profile"; exit 1; }
+echo "### stability ${seconds}s: $* ${run:+(agino-gpu-run)}"
+python3 -I "$here/cdp-gpuinfo.py" "$port"
+python3 -I "$here/cdp-stability.py" "$port" "$(main_pids | tr '\n' ',')" "$seconds" 30
+echo "dgpu while running: $(cat "$(dgpu_pm)" 2>/dev/null || echo none)"
+echo "gpu process trouble in log: $(grep -ciE 'GPU process exited|GPU process crashed|GPU process isn.t usable' "$log")  invalid-visual: $(grep -c 'Invalid visual' "$log")"
+close_program
+dgpu_settle
+rm -rf "$log" "$profile"

@@ -1,0 +1,35 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# chromium-webgl-cts [--gpu-run] ROOT BROWSER [ARGS...]
+# Runs one directory of the Khronos WebGL conformance suite (ROOT, e.g. conformance/rendering; WebGL 2,
+# from registry.khronos.org) in a Chromium-based browser with a fresh profile and prints the browser's
+# renderer, the harness summary, the failing and timed-out pages and GPU-process trouble in the log.
+# --gpu-run starts the browser through agino-gpu-run (the launch path of design.md 5.4). Compare a run
+# with and without it to see whether rendering on the dGPU adds failures. ARGS can carry
+# e.g. --proxy-server=. CHROMIUM_CTS_TIMEOUT (default 900 s) bounds one run. Run by hand.
+#
+# The harness is the browser's start page because a tab opened later stays in the background and its
+# tests stall (cdp.py). A single directory goes through root=, not include=: the harness skips excluded
+# tests by synchronous recursion, which overflows the JS stack with thousands of them and stops the run.
+set -u
+run=
+[ "${1:-}" = --gpu-run ] && { run=/usr/bin/agino-gpu-run; shift; }
+[ $# -ge 2 ] || { echo "usage: $0 [--gpu-run] ROOT BROWSER [ARGS...]" >&2; exit 2; }
+root=$1; shift
+here=$(dirname "$(readlink -f "$0")")
+. "$here/chromium-lib.sh"
+port=${CHROMIUM_GPU_PROBE_PORT:-9341}
+log=$(mktemp)
+profile=$(mktemp -d)
+url="https://registry.khronos.org/webgl/sdk/tests/webgl-conformance-tests.html?run=1&root=$root"
+
+# --disable-backgrounding-occluded-windows: the run keeps going when another window covers the browser.
+# shellcheck disable=SC2086 # run is empty or one word
+start_program "$log" $run "$@" --user-data-dir="$profile" --no-first-run --no-default-browser-check \
+    --disable-backgrounding-occluded-windows "$url" || { rm -rf "$log" "$profile"; exit 1; }
+echo "### $root: $* ${run:+(agino-gpu-run)}"
+python3 -I "$here/cdp-gpuinfo.py" "$port" | head -1
+python3 -I "$here/cdp-webgl-cts.py" "$port" "${CHROMIUM_CTS_TIMEOUT:-900}"
+echo "gpu process trouble in log: $(grep -ciE 'GPU process exited|GPU process crashed|GPU process isn.t usable' "$log")  invalid-visual: $(grep -c 'Invalid visual' "$log")"
+close_program
+rm -rf "$log" "$profile"

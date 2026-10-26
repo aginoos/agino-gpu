@@ -1,0 +1,27 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Page for chromium-stability: a looping video (path in the URL fragment) next to a WebGL 2 fractal
+     that counts its frames in window.__frames (left out with ?nowebgl). -->
+<!doctype html><meta charset="utf-8"><title>agino-gpu stability</title>
+<style>body{margin:0;background:#111;color:#ccc;font:14px sans-serif}video,canvas{width:48vw;height:27vw;margin:1vw}</style>
+<video id="v" muted loop autoplay playsinline></video><canvas id="c" width="1280" height="720"></canvas><pre id="s"></pre>
+<script>
+const v = document.getElementById('v');
+v.src = decodeURIComponent(location.hash.slice(1));
+window.__frames = 0;
+if (!location.search.includes('nowebgl')) {
+  const gl = document.getElementById('c').getContext('webgl2');
+  const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, `#version 300 es
+  in vec2 a; out vec2 uv; void main(){ uv=a; gl_Position=vec4(a,0.,1.); }`));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `#version 300 es
+  precision highp float; in vec2 uv; uniform float t; out vec4 o;
+  void main(){ vec2 q=uv*4.; float c=0.; for(int i=0;i<64;i++){ q=abs(q)/dot(q,q)-vec2(.9+.1*sin(t*.3),.6); c+=length(q);} o=vec4(.5+.5*sin(c*.05+t),.5+.5*sin(c*.07),.5+.5*cos(c*.03),1.); }`));
+  gl.linkProgram(p); gl.useProgram(p);
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const tl = gl.getUniformLocation(p, 't');
+  (function f(ts){ gl.uniform1f(tl, ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); window.__frames++; requestAnimationFrame(f); })(0);
+}
+</script>

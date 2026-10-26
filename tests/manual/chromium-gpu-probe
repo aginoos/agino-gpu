@@ -11,38 +11,22 @@ offload=
 [ "${1:-}" = --offload ] && { offload=1; shift; }
 [ $# -ge 1 ] || { echo "usage: $0 [--offload] PROGRAM [ARGS...]" >&2; exit 2; }
 here=$(dirname "$(readlink -f "$0")")
+. "$here/chromium-lib.sh"
 port=${CHROMIUM_GPU_PROBE_PORT:-9341}
 log=$(mktemp)
 envs=
 [ -n "$offload" ] && envs=$(grep -v '^#' /run/agino-gpu/offload.env | tr '\n' ' ')
-pm=$(for f in /sys/bus/pci/devices/*; do [ "$(cat "$f/vendor")" = 0x10de ] && [ "$(cut -c1-4 "$f/class")" = 0x03 ] && echo "$f/power/runtime_status"; done | head -1)
 
 # shellcheck disable=SC2086 # envs is a list of KEY=VALUE words
-setsid env $envs "$@" --remote-debugging-port="$port" >"$log" 2>&1 </dev/null &
-i=0
-until curl -s -o /dev/null "http://127.0.0.1:$port/json/version"; do
-    i=$((i + 1)); [ $i -gt 40 ] && { echo "no DevTools endpoint on port $port" >&2; break; }
-    sleep 0.5
-done
+start_program "$log" env $envs "$@"
 sleep 4
 echo "program: $* ${offload:+(offload)}"
 python3 -I "$here/cdp-gpuinfo.py" "$port" || true
-echo "invalid-visual: $(grep -c 'Invalid visual' "$log")  dgpu: $(cat "$pm" 2>/dev/null || echo none)"
-# The browser/main processes carry the DevTools switch and no --type=; the GPU process is their child
-# or, in Chrome, a child of the zygote the main process started.
-mains=$(for p in $(pgrep -f -- "--remote-debugging-port=$port"); do
-    tr '\0' '\n' <"/proc/$p/cmdline" 2>/dev/null | grep -q -- '--type=' || echo "$p"
-done)
-for m in $mains; do
-    for p in $(pgrep -P "$m") $(for c in $(pgrep -P "$m"); do pgrep -P "$c"; done); do
-        if tr '\0' '\n' <"/proc/$p/cmdline" 2>/dev/null | grep -q -- '--type=gpu-process'; then
-            echo "gpu process: $(tr '\0' '\n' <"/proc/$p/cmdline" | grep -E -- '^--?(use-angle|enable-features|disable-features)=' | tr '\n' ' ')"
-        fi
-    done
+echo "invalid-visual: $(grep -c 'Invalid visual' "$log")  dgpu: $(cat "$(dgpu_pm)" 2>/dev/null || echo none)"
+for p in $(gpu_pids); do
+    echo "gpu process: $(tr '\0' '\n' <"/proc/$p/cmdline" | grep -E -- '^--?(use-angle|enable-features|disable-features)=' | tr '\n' ' ')"
 done
 # Close the program and report how long the dGPU takes to go back to runtime suspend.
-for m in $mains; do kill "$m" 2>/dev/null; done
-t=0
-while [ -n "$pm" ] && [ "$(cat "$pm")" != suspended ] && [ $t -lt 60 ]; do sleep 1; t=$((t + 1)); done
-[ -n "$pm" ] && echo "dgpu after close: $(cat "$pm") after ${t}s"
+close_program
+dgpu_settle
 rm -f "$log"
