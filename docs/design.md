@@ -83,6 +83,7 @@ daemon 维护三个量：
 2. 从 `mux-dedicated` 或改到 `mux-dedicated`，`PendingAction` 一定是 `reboot`。
 3. 不同时排队两种操作：已有待生效的模式时再次 `SetMode`，以最后一次为准。
 4. 开机时落实失败（例如 `dedicated` 下 Xorg 起不来），`agino-gpu-apply` 回退到 `hybrid`，把失败原因写进 `/var/lib/agino-gpu/last-failure`，下次登录由快捷面板插件发桌面通知，磁贴副标题变红。
+   - 实现细节（P1 审查后）：可能是暂时性的原因（设备晚出现、MUX 接口还没加载）只对本次开机回退，保存的模式不变，下次开机再试；确定不可行的（硬件不支持、固件 MUX 没切过去、集显没有接屏幕）永久改回 `hybrid`。集显模式下 udev 辅助程序遇到 MUX 处于直连、看不到集显、外接显卡坞时不移除独显；`agino-gpu-apply` 移除后若集显 10 秒内没有任何接上的屏幕，就删掉 modprobe 规则、写 `/run/agino-gpu/keep-dgpu`、重新扫描 PCI 并重放 `add` 事件，把独显找回来。
 
 ### 3.3 切换前检查（`SetMode` 返回错误或警告）
 
@@ -314,7 +315,7 @@ agino-gpu/
 | 编号 | 内容 | 影响 |
 |---|---|---|
 | V-1 | lightdm 注销后是否重启 X 服务器 | `dedicated` 是“注销”还是“重启”生效 |
-| V-2 | agino 的 initramfs 是否带 nvidia 模块 | `integrated` 是否需要 `update-initramfs` |
+| V-2 | agino 的 initramfs 是否带 nvidia 模块 | 分析（2026-10-26）：不需要 `update-initramfs`。initramfs 里旧的 modprobe 配置最多让 nvidia 在 initramfs 阶段加载不了，切到真实根文件系统后照常加载；反过来若 nvidia 已在 initramfs 里加载，移除 PCI 设备时内核先解绑驱动。仍要在 157 上用 `lsinitramfs` 核实 |
 | V-3 | 157 移除 PCI 设备 / `dgpu_disable` 后的功耗 | `integrated` 的实际价值 |
 | V-4 | 反向 PRIME 下 dde-daemon 显示服务和 KWin 的表现 | `dedicated` 可用性 |
 | V-5 | NVIDIA EGL 在 X11 按需渲染下是否正常 | Chromium/Electron 走 EGL 还是 Vulkan |
