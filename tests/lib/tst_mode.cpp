@@ -131,10 +131,12 @@ private Q_SLOTS:
         QCOMPARE(state->active, Mode::Dedicated);
         QVERIFY(state->failure.isEmpty());
 
-        QVERIFY(writeBootState(root, BootState{Mode::Hybrid, QStringLiteral("Xorg failed=1\nsecond line")}));
+        QVERIFY(writeBootState(root, BootState{Mode::Hybrid, QStringLiteral("Xorg failed=1\nsecond line"),
+                                               Mode::Dedicated}));
         state = readBootState(root);
         QVERIFY(state.has_value());
         QCOMPARE(state->active, Mode::Hybrid);
+        QCOMPARE(state->attempted, Mode::Dedicated);
         QCOMPARE(state->failure, QStringLiteral("Xorg failed=1 second line"));
     }
 

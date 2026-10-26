@@ -50,7 +50,7 @@ void FailureNotifier::send(const QString &failure)
     m_failure = failure;
     QDBusMessage call = QDBusMessage::createMethodCall(kService, kPath, kInterface, QStringLiteral("Notify"));
     call << QStringLiteral("agino-gpu") << uint(0) << QStringLiteral("video-card")
-         << QpTexts::switchFailedTitle() << Texts::failureBanner(m_state->configuredMode())
+         << QpTexts::switchFailedTitle() << Texts::failureBanner(m_state->failedMode())
          << QStringList { kDefaultAction, Texts::details() } << QVariantMap() << -1;
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *w) {
@@ -73,9 +73,13 @@ void FailureNotifier::onActionInvoked(uint id, const QString &actionKey)
 
 void FailureNotifier::onClosed(uint id, uint reason)
 {
-    Q_UNUSED(reason);
-    if (id == m_id && id != 0)
+    if (id != m_id || id == 0)
+        return;
+    // 2 = dismissed by the user. Expired (1) or closed by a call (3) does not count as seen.
+    if (reason == 2)
         dismiss();
+    else
+        m_id = 0;
 }
 
 void FailureNotifier::dismiss()

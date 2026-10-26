@@ -32,11 +32,13 @@ Mode readConfiguredMode(const Root &root);
 bool writeConfiguredMode(const Root &root, Mode mode, QString *error = nullptr);
 
 // /run/agino-gpu/state: written by agino-gpu-apply at boot. "key=value" lines:
-//   active=<mode>   failure=<text, may be empty>
+//   active=<mode>   failure=<text, may be empty>   attempted=<the configured mode at boot>
+// `attempted` names the mode that failed: a persisted failure resets the saved mode to hybrid.
 struct BootState
 {
     Mode active = Mode::Hybrid;
     QString failure;
+    Mode attempted = Mode::Hybrid;
 };
 std::optional<BootState> readBootState(const Root &root); // nullopt when the file is missing
 bool writeBootState(const Root &root, const BootState &state, QString *error = nullptr);

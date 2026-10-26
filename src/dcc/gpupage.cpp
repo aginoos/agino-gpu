@@ -158,6 +158,7 @@ void GpuPage::refreshBanner()
 {
     BannerInput in;
     in.configured = m_state->configuredMode();
+    in.failedMode = m_state->failedMode();
     in.active = m_state->activeMode();
     in.pending = m_state->pendingAction();
     in.lastFailure = m_state->lastFailure();

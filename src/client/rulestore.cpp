@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QStandardPaths>
 
@@ -22,6 +23,13 @@ const QString kEffectivePathsKey = QStringLiteral("effectivePaths");
 const QString kAppliedAppsKey = QStringLiteral("appliedApps");
 const QString kAppliedEnvKey = QStringLiteral("appliedEnvironment");
 const QString kDismissedFailureKey = QStringLiteral("dismissedFailure");
+
+// launcherEntry comes back from DConfig: accept only a bare "agino-gpu-<hex>.desktop" name.
+bool isLauncherEntryName(const QString &entry)
+{
+    static const QRegularExpression re(QStringLiteral("^agino-gpu-[0-9a-f]{16}\\.desktop$"));
+    return re.match(entry).hasMatch();
+}
 
 // Only entries we wrote are ever deleted.
 bool isOurLauncher(const QString &file)
@@ -144,7 +152,7 @@ void RuleStore::removePath(const QString &path)
     });
     if (removed == 0)
         return;
-    if (!entry.isEmpty()) {
+    if (isLauncherEntryName(entry)) {
         const QString file = launcherDirectory() + QLatin1Char('/') + entry;
         if (isOurLauncher(file))
             QFile::remove(file);

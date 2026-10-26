@@ -154,7 +154,7 @@ private Q_SLOTS:
     {
         const QStringList env{QStringLiteral("A=1"), QStringLiteral("B=2")};
         QCOMPARE(mergeRuleEnvironment({}, env),
-                 (QStringList{QStringLiteral("A=1"), QStringLiteral("B=2"), QStringLiteral("AGINO_GPU_RULE=1")}));
+                 (QStringList{QStringLiteral("A=1"), QStringLiteral("B=2"), QStringLiteral("AGINO_GPU_RULE=A,B")}));
     }
 
     void mergeKeepsForeignFirst()
@@ -163,7 +163,7 @@ private Q_SLOTS:
         const QStringList existing{QStringLiteral("X=1"), QStringLiteral("Y=a=b")};
         QCOMPARE(mergeRuleEnvironment(existing, env),
                  (QStringList{QStringLiteral("X=1"), QStringLiteral("Y=a=b"), QStringLiteral("A=1"),
-                              QStringLiteral("AGINO_GPU_RULE=1")}));
+                              QStringLiteral("AGINO_GPU_RULE=A")}));
     }
 
     void mergeForeignSameKeyWins()
@@ -171,7 +171,7 @@ private Q_SLOTS:
         const QStringList env{QStringLiteral("A=1"), QStringLiteral("B=2")};
         QCOMPARE(mergeRuleEnvironment({QStringLiteral("A=user=x")}, env),
                  (QStringList{QStringLiteral("A=user=x"), QStringLiteral("B=2"),
-                              QStringLiteral("AGINO_GPU_RULE=1")}));
+                              QStringLiteral("AGINO_GPU_RULE=B")}));
     }
 
     void mergeIsIdempotent()
@@ -190,14 +190,14 @@ private Q_SLOTS:
         const QStringList merged = mergeRuleEnvironment(mergeRuleEnvironment({QStringLiteral("X=1")}, oldEnv), newEnv);
         QCOMPARE(merged,
                  (QStringList{QStringLiteral("X=1"), QStringLiteral("A=1"), QStringLiteral("B=2"),
-                              QStringLiteral("AGINO_GPU_RULE=1")}));
+                              QStringLiteral("AGINO_GPU_RULE=A,B")}));
     }
 
     void removeWithMarker()
     {
         const QStringList env{QStringLiteral("A=1"), QStringLiteral("B=2")};
         const QStringList existing{QStringLiteral("X=1"), QStringLiteral("A=user"), QStringLiteral("A=1"),
-                                   QStringLiteral("B=2"), QStringLiteral("AGINO_GPU_RULE=1")};
+                                   QStringLiteral("B=2"), QStringLiteral("AGINO_GPU_RULE=A,B")};
         QCOMPARE(removeRuleEnvironment(existing, env),
                  (QStringList{QStringLiteral("X=1"), QStringLiteral("A=user")}));
     }
@@ -215,6 +215,30 @@ private Q_SLOTS:
         const QStringList env{QStringLiteral("A=1"), QStringLiteral("B=2")};
         const QStringList foreign{QStringLiteral("X=1"), QStringLiteral("B=mine")};
         QCOMPARE(removeRuleEnvironment(mergeRuleEnvironment(foreign, env), env), foreign);
+    }
+
+    void userEntryWithSameValueSurvives()
+    {
+        // review P2 #1: the user's own DRI_PRIME=1 equals ours; we skip it, so it is not ours
+        const QStringList env{QStringLiteral("DRI_PRIME=1"), QStringLiteral("MESA_VK_DEVICE_SELECT=1002:73df")};
+        const QStringList user{QStringLiteral("DRI_PRIME=1")};
+        const QStringList merged = mergeRuleEnvironment(user, env);
+        QCOMPARE(merged.last(), QStringLiteral("AGINO_GPU_RULE=MESA_VK_DEVICE_SELECT"));
+        QCOMPARE(removeRuleEnvironment(merged, env), user);
+        QCOMPARE(mergeRuleEnvironment(merged, env), merged);
+    }
+
+    void mergeWithNothingToAddHasNoMarker()
+    {
+        const QStringList user{QStringLiteral("A=mine")};
+        QCOMPARE(mergeRuleEnvironment(user, {QStringLiteral("A=1")}), user);
+    }
+
+    void removeKeepsLaterUserDuplicate()
+    {
+        // the user added the same key after us, with another value: only ours goes
+        const QStringList existing{QStringLiteral("A=1"), QStringLiteral("AGINO_GPU_RULE=A"), QStringLiteral("A=2")};
+        QCOMPARE(removeRuleEnvironment(existing, {QStringLiteral("A=1")}), (QStringList{QStringLiteral("A=2")}));
     }
 
     void resolveExec()

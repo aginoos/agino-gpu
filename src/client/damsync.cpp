@@ -29,6 +29,9 @@ bool applyUpdate(const DamUpdate &u)
     std::unique_ptr<Dtk::Core::DConfig> config(
         Dtk::Core::DConfig::create(kDamAppId, kDamConfig, QLatin1Char('/') + u.appId));
     if (!config->isValid()) {
+        // Nothing can be left to remove there; only an addition really failed.
+        if (u.add.isEmpty())
+            return true;
         qWarning("agino-gpu: DAM config for %s is not available", qPrintable(u.appId));
         return false;
     }

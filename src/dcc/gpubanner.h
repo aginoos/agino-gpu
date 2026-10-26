@@ -7,6 +7,8 @@
 #include <QStringList>
 #include <QVariantMap>
 
+#include <optional>
+
 namespace AginoGpu {
 
 // What the last user action left behind: a refused or failed switch, or warnings the user has
@@ -22,6 +24,7 @@ struct FlowNotice
 struct BannerInput
 {
     Mode configured = Mode::Hybrid;
+    std::optional<Mode> failedMode;
     Mode active = Mode::Hybrid;
     PendingAction pending = PendingAction::None;
     QString lastFailure;

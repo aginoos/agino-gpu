@@ -138,6 +138,8 @@ std::optional<BootState> readBootState(const Root &root)
             state.active = modeFromString(value).value_or(Mode::Hybrid);
         else if (key == QLatin1String("failure"))
             state.failure = value;
+        else if (key == QLatin1String("attempted"))
+            state.attempted = modeFromString(value).value_or(Mode::Hybrid);
     }
     return state;
 }
@@ -147,7 +149,8 @@ bool writeBootState(const Root &root, const BootState &state, QString *error)
     // The value must stay on one line.
     QString failure = state.failure;
     failure.replace(QLatin1Char('\n'), QLatin1Char(' ')).replace(QLatin1Char('\r'), QLatin1Char(' '));
-    const QString text = QStringLiteral("active=%1\nfailure=%2\n").arg(modeToString(state.active), failure);
+    const QString text = QStringLiteral("active=%1\nfailure=%2\nattempted=%3\n")
+                             .arg(modeToString(state.active), failure, modeToString(state.attempted));
     return root.writeFile(path(kStatePath), text.toUtf8(), 0644, error);
 }
 

@@ -113,9 +113,13 @@ QString pendingBanner(Mode configured, PendingAction action)
     return QString();
 }
 
-QString failureBanner(Mode configured)
+QString failureBanner(std::optional<Mode> failed)
 {
-    return QCoreApplication::translate("AginoGpu", "Could not switch to %1; back to %2").arg(modeName(configured), modeName(Mode::Hybrid));
+    if (!failed)
+        return QCoreApplication::translate("AginoGpu", "Could not switch the graphics mode; back to %1")
+            .arg(modeName(Mode::Hybrid));
+    return QCoreApplication::translate("AginoGpu", "Could not switch to %1; back to %2")
+        .arg(modeName(*failed), modeName(Mode::Hybrid));
 }
 
 QString checkText(const CheckItem &item, const QStringList &outputs)

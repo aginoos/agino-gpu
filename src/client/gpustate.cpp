@@ -15,6 +15,9 @@ namespace AginoGpu {
 namespace {
 
 constexpr int kPollIntervalMs = 2000;
+// A missing state directory (/run/agino-gpu before agino-gpu-apply ran, /var/lib/agino-gpu
+// before the first failure) cannot be watched; look for it this often.
+constexpr int kRewatchIntervalMs = 30000;
 
 // Directories, not files: the files are replaced by rename (Root::writeFile), which a file
 // watch does not survive.
@@ -39,6 +42,7 @@ GpuState::GpuState(const Root &root, QObject *parent)
     , m_root(root)
     , m_watcher(new QFileSystemWatcher(this))
     , m_poll(new QTimer(this))
+    , m_rewatch(new QTimer(this))
 {
     init();
 }
@@ -48,6 +52,8 @@ void GpuState::init()
     m_poll->setInterval(kPollIntervalMs);
     connect(m_poll, &QTimer::timeout, this, &GpuState::poll);
     connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, &GpuState::reload);
+    m_rewatch->setInterval(kRewatchIntervalMs);
+    connect(m_rewatch, &QTimer::timeout, this, &GpuState::reload);
     m_hw = detectHardware(m_root);
     reload();
 }
@@ -94,15 +100,19 @@ void GpuState::reload()
     const std::optional<BootState> boot = readBootState(m_root);
     const Mode active = boot ? boot->active : Mode::Hybrid;
     QString failure = boot ? boot->failure : QString();
-    if (failure.isEmpty())
+    std::optional<Mode> failedMode;
+    if (!failure.isEmpty())
+        failedMode = boot->attempted;
+    else
         failure = readLastFailure(m_root);
     const QStringList env = readOffloadEnv(m_root);
 
     const bool same = configured == m_configured && active == m_active && failure == m_lastFailure
-        && env == m_offloadEnv;
+        && env == m_offloadEnv && failedMode == m_failedMode;
     m_configured = configured;
     m_active = active;
     m_lastFailure = failure;
+    m_failedMode = failedMode;
     m_offloadEnv = env;
     rewatch();
     if (!same)
@@ -118,17 +128,24 @@ void GpuState::redetect()
 
 void GpuState::rewatch()
 {
-    // A directory that did not exist yet (/run/agino-gpu before agino-gpu-apply ran) is
-    // picked up on the next reload.
-    QStringList missing;
+    // A directory that does not exist yet is picked up by m_rewatch; one that is deleted drops
+    // out of the watcher by itself and is picked up the same way when it comes back.
+    QStringList toAdd;
+    bool absent = false;
     const QStringList watched = m_watcher->directories();
     for (const QString &dir : watchedDirectories()) {
         const QString path = m_root.path(dir);
-        if (!watched.contains(path) && QFileInfo::exists(path))
-            missing << path;
+        if (!QFileInfo::exists(path))
+            absent = true;
+        else if (!watched.contains(path))
+            toAdd << path;
     }
-    if (!missing.isEmpty())
-        m_watcher->addPaths(missing);
+    if (!toAdd.isEmpty())
+        m_watcher->addPaths(toAdd);
+    if (absent && !m_rewatch->isActive())
+        m_rewatch->start();
+    else if (!absent)
+        m_rewatch->stop();
 }
 
 void GpuState::poll()

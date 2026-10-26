@@ -107,7 +107,7 @@ BannerSpec Panel::currentBanner()
     if (!m_switcher->notice().isEmpty())
         return noticeBanner();
     if (!m_state->lastFailure().isEmpty()) {
-        return { Texts::failureBanner(m_state->configuredMode()),
+        return { Texts::failureBanner(m_state->failedMode()),
                  { { Texts::details(), [this] { openSettings(); } } } };
     }
     return pendingBanner();

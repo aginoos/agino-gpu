@@ -6,6 +6,8 @@
 
 #include <QString>
 
+#include <optional>
+
 namespace AginoGpu {
 
 // UI strings shared by both plugins (design.md §7.3), translated in context "AginoGpu" from
@@ -25,7 +27,9 @@ QString dgpuStatus(DgpuStatus status);    // Sleeping / Active / Off
 // Banner after SetMode succeeded and something is still to do: "Switches to Integrated after
 // restart".
 QString pendingBanner(Mode configured, PendingAction action);
-QString failureBanner(Mode configured);   // "Could not switch to Dedicated; back to Hybrid"
+// "Could not switch to Dedicated; back to Hybrid"; without the mode (failure from an earlier
+// boot): "Could not switch the graphics mode; back to Hybrid".
+QString failureBanner(std::optional<Mode> failed);
 // CheckMode result; `outputs` names the connectors on the discrete GPU for the
 // external-display warning.
 QString checkText(const CheckItem &item, const QStringList &outputs);

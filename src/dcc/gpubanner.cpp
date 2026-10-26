@@ -54,7 +54,7 @@ QVariantMap buildBanner(const BannerInput &in)
     if (in.pending != PendingAction::None)
         return pendingBanner(in);
     if (!in.lastFailure.isEmpty() && !in.failureDismissed) {
-        return banner(QStringLiteral("error"), Texts::failureBanner(in.configured),
+        return banner(QStringLiteral("error"), Texts::failureBanner(in.failedMode),
                       {action(QStringLiteral("details"), Texts::details()), action(QStringLiteral("dismiss"), QString())},
                       in.lastFailure);
     }

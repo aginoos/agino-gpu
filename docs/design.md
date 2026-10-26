@@ -170,7 +170,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
   - 按应用（`apps`）：来自系统里的应用（DAM 的应用列表），或用户浏览选中的 `.desktop` 文件（应用标识取文件名去掉 `.desktop`）。
   - 按文件（`paths`）：来自控制中心“选择文件…”选中的可执行文件、AppImage 或脚本（D-141 补充：允许用户浏览文件指定应用，不只读系统已安装的应用）。路径存规范化后的绝对路径；文件被移动或删除时规则在界面上标“文件不存在”，不自动删除。
   - 同一 DConfig 的其他键由客户端库维护（P2 实现）：`effectivePaths`（此刻生效的按文件规则路径；不在混合模式或因电池暂停时为空，DAM 补丁只读这个键，不解析 JSON、不判断电源），`appliedApps` / `appliedEnvironment`（哪些应用的 DAM 配置里有我们写的项、写的是哪些，用于之后准确删除），`dismissedFailure`（用户已关闭的切换失败通知）。
-- 规则落到 DAM：对每个 `gpu=discrete` 的应用，把 5.1 的变量写进 DAM 的 DConfig `org.deepin.dde.application-manager` 子路径 `/<appid>` 的 `appExtraEnvironments`，并在同一列表里加一个标记项 `AGINO_GPU_RULE=1`，用来区分我们写的和用户/其他程序写的；删除规则时只删除我们写的那些项。
+- 规则落到 DAM：对每个 `gpu=discrete` 的应用，把 5.1 的变量写进 DAM 的 DConfig `org.deepin.dde.application-manager` 子路径 `/<appid>` 的 `appExtraEnvironments`，并在同一列表里加一个标记项 `AGINO_GPU_RULE=<我们实际加入的变量名，逗号分隔>`；用户自己已设置的同名变量保留、我们的跳过且不进标记，删除规则时只删除标记列出、且值与我们写入的一致的项（P2 审查修正：原来的 `AGINO_GPU_RULE=1` 会把用户自己的同值变量一起删掉）。
 - 按文件的规则不写 DAM 的按应用配置（没有应用标识），由 DAM 补丁在启动时匹配（5.3 第 1 条）。用户勾选“在启动器里创建入口”时，在 `~/.local/share/applications/` 写一个 `agino-gpu-<路径哈希>.desktop`（`Exec` 指向该文件，`Name` 默认取文件名、可改），删除规则时一并删除；入口只是方便启动，规则本身靠路径匹配生效。
 - 电池策略：一个整组开关 `pauseOnBattery`（布尔，默认开），不按条设置（草案 3 简化）。开着时，切到电池供电由客户端库（`DamRuleSync`，电源状态取自 UPower 的 `OnBattery`）把所有规则项从 DAM 里拿掉并清空 `effectivePaths`，接上电源后恢复。执行者是快捷面板插件（随 dde-tray-loader 在登录时加载并常驻，不需要用户打开面板）；控制中心插件打开时也运行同一个同步，使改动不依赖快捷面板立即生效（同步是幂等的）；插件被禁用时电池策略不生效（在本文记录，界面上不另加说明）。
 - 内置推荐规则（`/usr/share/agino-gpu/default-rules.json`，例如 Steam、Blender、DaVinci Resolve），用户可关。第一期默认不启用任何规则，只在界面上作为“推荐”列出。

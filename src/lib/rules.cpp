@@ -220,29 +220,46 @@ QByteArray launcherEntryContents(const QString &canonicalPath, const QString &na
 
 QStringList mergeRuleEnvironment(const QStringList &existing, const QStringList &offloadEnv)
 {
-    const QString marker = QLatin1String(kRuleMarker);
-    // Drop the entries of a previous merge first (exact matches only, and only when marked).
-    QStringList result = removeRuleEnvironment(existing, offloadEnv);
+    QStringList result = removeRuleEnvironment(existing, QStringList());
     QStringList foreignKeys;
     for (const QString &e : std::as_const(result))
         foreignKeys << keyOf(e);
+    QStringList added;
     for (const QString &e : offloadEnv) {
-        if (!foreignKeys.contains(keyOf(e)))
+        if (!foreignKeys.contains(keyOf(e))) {
             result << e;
+            added << keyOf(e);
+        }
     }
-    result << marker;
+    if (!added.isEmpty())
+        result << QLatin1String(kRuleMarkerPrefix) + added.join(QLatin1Char(','));
     return result;
 }
 
-QStringList removeRuleEnvironment(const QStringList &existing, const QStringList &offloadEnv)
+QStringList removeRuleEnvironment(const QStringList &existing, const QStringList &ourEnv)
 {
-    const QString marker = QLatin1String(kRuleMarker);
-    if (!existing.contains(marker))
+    const QLatin1String prefix(kRuleMarkerPrefix);
+    QStringList ourKeys;
+    bool marked = false;
+    for (const QString &e : existing) {
+        if (e.startsWith(prefix)) {
+            marked = true;
+            ourKeys += e.mid(prefix.size()).split(QLatin1Char(','), Qt::SkipEmptyParts);
+        }
+    }
+    if (!marked)
         return existing;
+
     QStringList result;
     for (const QString &e : existing) {
-        if (e != marker && !offloadEnv.contains(e))
-            result << e;
+        if (e.startsWith(prefix))
+            continue;
+        const QString key = keyOf(e);
+        if (ourKeys.contains(key) && (ourEnv.isEmpty() || ourEnv.contains(e))) {
+            ourKeys.removeOne(key); // one entry per key we added
+            continue;
+        }
+        result << e;
     }
     return result;
 }

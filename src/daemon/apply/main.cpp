@@ -190,7 +190,7 @@ int main()
     }
 
     QString err;
-    if (!writeBootState(root, BootState{active, failure}, &err))
+    if (!writeBootState(root, BootState{active, failure, configured}, &err))
         say(err);
     else
         say(QStringLiteral("active mode: %1").arg(modeToString(active)));

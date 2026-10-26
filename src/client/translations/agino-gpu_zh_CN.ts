@@ -139,5 +139,9 @@
         <source>Graphics Settings</source>
         <translation>显卡设置</translation>
     </message>
+    <message>
+        <source>Could not switch the graphics mode; back to %1</source>
+        <translation>显卡模式切换失败，已恢复为%1</translation>
+    </message>
 </context>
 </TS>

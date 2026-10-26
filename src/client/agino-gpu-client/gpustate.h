@@ -7,6 +7,8 @@
 #include <QObject>
 #include <QStringList>
 
+#include <optional>
+
 class QFileSystemWatcher;
 class QTimer;
 
@@ -39,6 +41,9 @@ public:
     // Boot failure of this boot (from /run/agino-gpu/state) or, failing that, the persistent
     // /var/lib/agino-gpu/last-failure text. Empty when there is none.
     QString lastFailure() const { return m_lastFailure; }
+    // The mode whose boot failed, when this boot recorded it; nullopt for a failure that only
+    // remains in /var/lib/agino-gpu/last-failure from an earlier boot.
+    std::optional<Mode> failedMode() const { return m_failedMode; }
     QStringList offloadEnvironment() const { return m_offloadEnv; }
 
     DgpuStatus dgpuStatus() const;
@@ -66,9 +71,11 @@ private:
     Mode m_configured = Mode::Hybrid;
     Mode m_active = Mode::Hybrid;
     QString m_lastFailure;
+    std::optional<Mode> m_failedMode;
     QStringList m_offloadEnv;
     QFileSystemWatcher *m_watcher = nullptr;
     QTimer *m_poll = nullptr;
+    QTimer *m_rewatch = nullptr; // runs while a watched directory does not exist
     int m_pollers = 0;
 };
 

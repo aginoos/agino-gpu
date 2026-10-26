@@ -67,6 +67,7 @@ void AginoGpuPlugin::init(PluginProxyInterface *proxyInter)
     m_notifier = new FailureNotifier(m_state, m_rules, this);
 
     connect(m_state, &GpuState::changed, this, &AginoGpuPlugin::syncVisibility);
+    connect(m_state, &GpuState::changed, m_notifier, &FailureNotifier::notifyIfNeeded);
     syncVisibility();
     m_notifier->notifyIfNeeded();
 }
