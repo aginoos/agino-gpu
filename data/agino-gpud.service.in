@@ -8,4 +8,15 @@ ExecStart=@AGINO_GPU_LIBEXECDIR@/agino-gpud
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes
-# No ProtectSystem: the daemon writes /etc/agino-gpu, /etc/X11/xorg.conf.d and /etc/modprobe.d.
+# Read-only file system except what the daemon writes; /sys stays writable (asus gpu_mux_mode)
+# and /proc readable (GetDgpuUsers). The package creates the two /etc directories.
+ProtectSystem=strict
+ReadWritePaths=/etc/agino-gpu /etc/X11/xorg.conf.d /etc/modprobe.d
+RestrictAddressFamilies=AF_UNIX
+MemoryDenyWriteExecute=yes
+LockPersonality=yes
+RestrictRealtime=yes
+ProtectKernelModules=yes
+ProtectHostname=yes
+SystemCallArchitectures=native
+# No CapabilityBoundingSet: listing every user's GPU processes reads other users' /proc/PID/fd.

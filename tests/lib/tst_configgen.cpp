@@ -170,10 +170,12 @@ private Q_SLOTS:
         QVERIFY(!error.isEmpty());
         QCOMPARE(readAll(root, kXorgDedicatedPath), foreign);
 
-        // delete refused, and nothing else is changed (the modprobe file is not written)
+        // a foreign file at a path we would only remove is left alone; the rest goes ahead
         error.clear();
-        QVERIFY(!applyGeneratedFiles(root, hw, Mode::Integrated, &error));
-        QVERIFY(!error.isEmpty());
+        QVERIFY2(applyGeneratedFiles(root, hw, Mode::Integrated, &error), qPrintable(error));
+        QCOMPARE(readAll(root, kXorgDedicatedPath), foreign);
+        QVERIFY(root.exists(QLatin1String(kModprobeIntegratedPath)));
+        QVERIFY2(applyGeneratedFiles(root, hw, Mode::Hybrid, &error), qPrintable(error));
         QCOMPARE(readAll(root, kXorgDedicatedPath), foreign);
         QVERIFY(!root.exists(QLatin1String(kModprobeIntegratedPath)));
     }

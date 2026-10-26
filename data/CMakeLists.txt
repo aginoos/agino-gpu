@@ -34,3 +34,7 @@ install(FILES "${GEN}/82-agino-gpu-integrated.rules" DESTINATION lib/udev/rules.
 # lightdm
 install(FILES "${GEN}/90-agino-gpu.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/lightdm/lightdm.conf.d")
 install(PROGRAMS display-setup DESTINATION "${AGINO_GPU_LIBEXECDIR}")
+
+# Directories the hardened agino-gpud.service lists in ReadWritePaths= (they must exist).
+install(DIRECTORY DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/agino-gpu")
+install(DIRECTORY DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/X11/xorg.conf.d")
