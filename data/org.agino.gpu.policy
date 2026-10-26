@@ -7,7 +7,9 @@
 
   <action id="org.agino.gpu.set-mode">
     <description>Change the graphics mode</description>
+    <description xml:lang="zh_CN">切换显卡模式</description>
     <message>Authentication is required to change the graphics mode</message>
+    <message xml:lang="zh_CN">切换显卡模式需要认证</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
@@ -17,7 +19,9 @@
 
   <action id="org.agino.gpu.list-all-users">
     <description>List all processes that use the discrete GPU</description>
+    <description xml:lang="zh_CN">列出所有使用独立显卡的进程</description>
     <message>Authentication is required to list the processes of other users that use the discrete GPU</message>
+    <message xml:lang="zh_CN">查看其他用户使用独立显卡的进程需要认证</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
