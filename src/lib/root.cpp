@@ -47,7 +47,12 @@ QString Root::linkTarget(const QString &absolute) const
     const QFileInfo info(path(absolute));
     if (!info.isSymLink())
         return QString();
-    QString target = info.symLinkTarget(); // absolute, resolved inside the prefix tree
+    // Resolve a relative target against the physical directory of the link: QFileInfo's
+    // symLinkTarget() works lexically and goes wrong when the link is reached through another
+    // symlinked directory (/sys/class/drm/card1/device).
+    const QString raw = info.readSymLink();
+    const QString dir = QFileInfo(info.absolutePath()).canonicalFilePath();
+    QString target = QDir::isAbsolutePath(raw) ? raw : dir + QLatin1Char('/') + raw;
     if (!m_prefix.isEmpty() && target.startsWith(m_prefix + QLatin1Char('/')))
         target = target.mid(m_prefix.size());
     return QDir::cleanPath(target);

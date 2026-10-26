@@ -79,7 +79,7 @@ private Q_SLOTS:
         QFETCH(QString, fixture);
         QFETCH(QList<Mode>, expected);
         const Hardware hw = detect(fixture.toLatin1().constData());
-        QCOMPARE(supportedModes(hw), expected);
+        QCOMPARE(AginoGpu::supportedModes(hw), expected);
     }
 
     void pendingActionMatrix()
