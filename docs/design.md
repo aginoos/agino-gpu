@@ -289,6 +289,7 @@ agino-gpu/
 ```
 
 - C++17（与 Qt 6.8 和 DTK 一致），Qt6 Core/DBus（daemon 不链接 Gui），插件用 DTK6 Widget / Qt Quick。
+- `libagino-gpu` 是静态库（位置无关代码），链接进 daemon、工具和两个插件，不安装、没有公开 ABI。polkit 授权直接调用 `org.freedesktop.PolicyKit1` 的 D-Bus 接口，不依赖 polkit-qt。
 - 一个二进制包 `agino-gpu`（daemon、apply、run、库、系统文件、快捷面板插件、控制中心插件），直接依赖 dde-tray-loader、dde-control-center、dde-application-manager 等 DDE 组件：它只为 agino 而做，不拆“通用服务 + DDE 插件”（D-141 补充）。agino-desktop-dde 加 Recommends。
 - 打包按 D-42：本仓库打标签（无 `v` 前缀），infra 加 `packages/agino-gpu/seed.json`。DAM、dde-launchpad、dde-shell 的补丁放 infra 各自的移植包，提版本。
 
@@ -296,7 +297,7 @@ agino-gpu/
 
 ### 9.1 单元测试（不需要硬件）
 
-- 检测逻辑以 sysfs 根目录为参数（`AGINO_GPU_SYSFS_ROOT`、`AGINO_GPU_PROC_ROOT`），用夹具测试：157 的真实快照、AMD 独显笔记本、台式机（显示器分别接集显/独显）、eGPU、单显卡。夹具从真机采集（采集脚本 `tests/collect-sysfs.sh` 只读、不唤醒独显）；无设备的形态先按内核文档手写，标“合成”。
+- 库里所有绝对路径（/sys、/proc、/etc、/run、/var）都经过 `AginoGpu::Root`，前缀取环境变量 `AGINO_GPU_ROOT`（空 = 真实文件系统），用夹具测试：157 的真实快照、AMD 独显笔记本、台式机（显示器分别接集显/独显）、eGPU、单显卡。夹具从真机采集（采集脚本 `tests/collect-sysfs.sh` 只读、不唤醒独显）；无设备的形态先按内核文档手写，标“合成”。
 - 状态机、配置生成（逐字节对照期望文件）、规则写入 DAM（用 DConfig 的测试后端）、环境变量集合、兼容配置匹配。
 
 ### 9.2 虚拟机（build 上）
@@ -323,6 +324,7 @@ agino-gpu/
 | V-10 | 两格磁贴点击后在面板内展开下级页面的接口（`itemPopupApplet` + `requestSetAppletVisible`）在 dde-shell 2.0.52 上的行为 | 快捷面板下级页面 |
 | V-11 | DAM 补丁按 `Exec` 程序路径匹配的可靠性（带参数、`env` 前缀、AppImage、脚本解释器） | 按文件的规则 |
 | V-9 | 157 是否有 `gpu_mux_mode`，切换后重启的实际流程 | `mux-dedicated` |
+| V-12 | 读 DRM 接口的 `status` 会不会唤醒挂起的独显 | 已确认不会：内核 `drm_sysfs.c` 的 `status_show` 只读缓存值（`READ_ONCE(connector->status)`，7.3 源码，2026-10-26） |
 
 ## 10. 分期
 
