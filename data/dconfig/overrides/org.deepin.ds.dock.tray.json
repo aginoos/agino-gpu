@@ -1,0 +1,26 @@
+{
+    "magic": "dsg.config.override",
+    "version": "1.0",
+    "contents": {
+        "quickPlugins": {
+            "value": [
+                "network",
+                "bluetooth",
+                "wireless-casting",
+                "agino-gpu",
+                "grand-search",
+                "eye-comfort-mode",
+                "airplane-mode",
+                "dnd-mode",
+                "shot-start-plugin",
+                "shot-start-record-plugin",
+                "clipboard",
+                "system-monitor",
+                "media",
+                "dde-brightness",
+                "sound"
+            ],
+            "serial": 0
+        }
+    }
+}

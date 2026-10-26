@@ -42,4 +42,11 @@ install(DIRECTORY DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/X11/xorg.conf.d"
 # User DConfig of the rules (read by the plugins and the DAM patch)
 if(AGINO_GPU_BUILD_PLUGINS)
     install(FILES dconfig/org.agino.gpu.json DESTINATION "${CMAKE_INSTALL_DATADIR}/dsg/configs/agino-gpu")
+    # The quick panel shows only the plugins named in its read-only quickPlugins list (dde-shell
+    # QuickPanelProxyModel::filterAcceptsRow, despite what the key's description says). This
+    # replaces the whole list: the dde-shell 2.0.52 default plus agino-gpu after the connection
+    # tiles. Revisit when dde-shell changes its default.
+    install(FILES dconfig/overrides/org.deepin.ds.dock.tray.json
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/dsg/configs/overrides/org.deepin.dde.shell/org.deepin.ds.dock.tray"
+            RENAME 50-agino-gpu.json)
 endif()
