@@ -243,7 +243,8 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 - 现状（kernel-graphics-hardware.md 10.16）：tlp 由 deepin-power-control 的模板把 `RUNTIME_PM_ON_AC/BAT` 写死为 `on`；手动打开后独显每分钟被唤醒 18～22 秒，电池多耗 7～8 W。
 - 前置任务要做到：(1) tlp 不再强制 NVIDIA 设备为 `on`（改 deepin-power-control 模板或用 `RUNTIME_PM_DENYLIST` 之外的方式，在 infra 决定）；(2) 找出并消除反复唤醒的来源；(3) 157 电池实测：休眠时功耗低于强制唤醒。
-- agino-gpu 自己只提供 udev 规则（NVIDIA Turing 及以后的显卡和同插槽音频功能设 `power/control=auto`），不再在运行中改 tlp。前置任务未完成之前，混合模式界面上不宣称“独显已休眠省电”，只显示实际状态。
+- 已完成（infra D-143，agino-kernel-config 26.0.13）：`/etc/tlp.d/41-agino-dgpu-rtd3.conf` 让 tlp 跳过 `nvidia amdgpu snd_hda_intel pcieport`（这些驱动自己打开运行时 PM），`/usr/lib/udev/rules.d/80-agino-dgpu-rtd3.rules` 给 NVIDIA 显卡和它的 HDMI 音频设 `auto`。独显、音频、上游根端口一起挂起，独显进入 D3cold。157 接电源时整机 32.7 W → 22.1～22.6 W；独显断电时显存内容存进内存，多占约 440 MiB。
+- agino-gpu 不再带自己的 udev 规则，也不在运行中改 tlp；只读这些设备的状态。Intel 独显（i915/xe 同时驱动集显，不能整体跳过）在 P6 有设备时再处理。
 
 ### 6.5 不唤醒独显
 
@@ -327,7 +328,7 @@ agino-gpu/
 
 | 期 | 内容 | 前置 |
 |---|---|---|
-| P0 | 运行时休眠修复（infra，6.4） | — |
+| P0 | 运行时休眠修复（infra，6.4；已完成，D-143） | — |
 | P1 | 库、daemon、apply、`agino-gpu-run`、单元测试 | — |
 | P2 | 快捷面板插件、控制中心插件 | P1 |
 | P3 | DAM / dde-launchpad / dde-shell 补丁 | P1（`offload.env` 格式） |
