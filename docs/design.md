@@ -325,6 +325,7 @@ agino-gpu/
 | V-11 | DAM 补丁按 `Exec` 程序路径匹配的可靠性（带参数、`env` 前缀、AppImage、脚本解释器） | 按文件的规则 |
 | V-9 | 157 是否有 `gpu_mux_mode`，切换后重启的实际流程 | `mux-dedicated` |
 | V-12 | 读 DRM 接口的 `status` 会不会唤醒挂起的独显 | 已确认不会：内核 `drm_sysfs.c` 的 `status_show` 只读缓存值（`READ_ONCE(connector->status)`，7.3 源码，2026-10-26） |
+| V-13 | agino 装好的系统里 lightdm 是否已有别的 `display-setup-script`（deepin 25 的 lastore 用 `90-deepin-upgrade.conf` 占用；agino 不装 lastore） | 有则 `display-setup` 要串联调用原脚本，而不是覆盖 |
 
 ## 10. 分期
 
