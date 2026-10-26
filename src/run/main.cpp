@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// agino-gpu-run [--] COMMAND [ARGS...]: run a command on the discrete GPU (design.md §5.1).
+// agino-gpu-run [--chromium] [--] COMMAND [ARGS...]: run a command on the discrete GPU (design.md §5.1).
 
 #include "agino-gpu/chromium.h"
 #include "agino-gpu/offloadenv.h"
 #include "agino-gpu/root.h"
 
 #include <QByteArray>
+#include <QElapsedTimer>
 #include <QFileInfo>
+#include <QProcess>
 #include <QStandardPaths>
 #include <QString>
 #include <QStringList>
@@ -22,9 +24,12 @@ namespace {
 
 void usage(FILE *out)
 {
-    std::fputs("Usage: agino-gpu-run [--] COMMAND [ARGS...]\n"
+    std::fputs("Usage: agino-gpu-run [--chromium] [--] COMMAND [ARGS...]\n"
                "Run COMMAND on the discrete GPU (PRIME render offload).\n"
-               "When no discrete GPU is available, COMMAND runs unchanged.\n",
+               "When no discrete GPU is available, COMMAND runs unchanged.\n"
+               "Chromium and Electron programs (detected by their runtime files, also inside an\n"
+               "AppImage) get the ANGLE-on-Vulkan switches they need to render on an NVIDIA GPU.\n"
+               "  --chromium  treat COMMAND as Chromium-based without detection (for wrapper scripts)\n",
                out);
 }
 
@@ -37,11 +42,54 @@ QString canonicalProgram(const char *program)
     return path.isEmpty() ? QString() : QFileInfo(path).canonicalFilePath();
 }
 
+// An AppImage shows its contents only when mounted: `<appimage> --appimage-mount` prints the mount
+// point and keeps it mounted until the process ends. Any failure means "not Chromium-like" and the
+// launch stays unchanged (design.md §5.4).
+bool appImageIsChromium(const QString &path)
+{
+    QProcess mount;
+    mount.setProcessChannelMode(QProcess::ForwardedErrorChannel);
+    mount.start(path, {QStringLiteral("--appimage-mount")});
+    if (!mount.waitForStarted(3000))
+        return false;
+    QByteArray line;
+    QElapsedTimer timer;
+    timer.start();
+    while (!line.contains('\n') && timer.elapsed() < 3000 && mount.state() != QProcess::NotRunning) {
+        if (mount.waitForReadyRead(200) || mount.bytesAvailable() > 0)
+            line += mount.readAllStandardOutput();
+    }
+    const QString mountPoint = QString::fromLocal8Bit(line.left(line.indexOf('\n'))).trimmed();
+    bool chromium = false;
+    if (line.contains('\n') && mountPoint.startsWith(QLatin1Char('/')))
+        chromium = AginoGpu::hasChromiumRuntime(AginoGpu::Root(), mountPoint);
+    // Ends exactly the child we started (it unmounts on SIGTERM); never pkill.
+    mount.terminate();
+    if (!mount.waitForFinished(3000)) {
+        mount.kill();
+        mount.waitForFinished(3000);
+    }
+    return chromium;
+}
+
+bool isChromiumProgram(const QString &program)
+{
+    const AginoGpu::Root root = AginoGpu::Root::fromEnvironment();
+    if (AginoGpu::isChromiumLike(root, program))
+        return true;
+    return AginoGpu::isAppImage(root, program) && appImageIsChromium(program);
+}
+
 } // namespace
 
 int main(int argc, char **argv)
 {
     int first = 1;
+    bool forceChromium = false;
+    if (first < argc && std::strcmp(argv[first], "--chromium") == 0) {
+        forceChromium = true;
+        ++first;
+    }
     if (first < argc && (std::strcmp(argv[first], "--help") == 0 || std::strcmp(argv[first], "-h") == 0)) {
         usage(stdout);
         return 0;
@@ -68,15 +116,15 @@ int main(int argc, char **argv)
     }
 
     // design.md §5.4: Chromium and Electron need ANGLE on Vulkan to render on an NVIDIA GPU.
-    // The switches go right after the program, before the user's own arguments.
     QStringList args;
     for (int i = first + 1; i < argc; ++i)
         args << QString::fromLocal8Bit(argv[i]);
-    const QString program = canonicalProgram(argv[first]);
-    const QStringList extended = program.isEmpty()
-        ? args
-        : AginoGpu::withChromiumOffloadArguments(AginoGpu::Root::fromEnvironment(), program, args,
-                                                 environment);
+    QStringList extended = args;
+    if (environment.contains(QStringLiteral("__NV_PRIME_RENDER_OFFLOAD=1"))) {
+        const QString program = forceChromium ? QString() : canonicalProgram(argv[first]);
+        if (forceChromium || (!program.isEmpty() && isChromiumProgram(program)))
+            extended = AginoGpu::withChromiumOffloadArguments(args);
+    }
     if (extended.size() != args.size()) {
         std::vector<QByteArray> storage;
         std::vector<char *> newArgv{argv[first]};

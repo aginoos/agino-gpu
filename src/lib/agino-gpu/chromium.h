@@ -7,23 +7,29 @@
 
 namespace AginoGpu {
 
-// design.md §5.4 (V-5): on X11 with NVIDIA PRIME render offload Chromium's default ANGLE-GL
-// backend fails and falls back to software rendering; ANGLE on Vulkan renders on the NVIDIA GPU.
-// The same rules are implemented by data/chromium.d/agino-gpu (Debian's wrapper) and by the DAM patch.
+// design.md §5.4 (V-5, §5.4.1): on X11 with NVIDIA PRIME render offload Chromium's default
+// ANGLE-GL backend fails and falls back to software rendering; ANGLE on Vulkan renders on the
+// NVIDIA GPU. This is the only implementation of the switches: agino-gpu-run applies them, the
+// DAM patch execs agino-gpu-run, and data/chromium.d/zz-agino-gpu hands over to it (--chromium).
 
-// `canonicalProgram` is an absolute, symlink-free path (without the Root prefix).
-// True for a known browser name (chromium, google-chrome*, microsoft-edge*, brave*, vivaldi*,
-// opera, electron, electron<N>) or an Electron app (resources/app.asar or resources/app/package.json
-// next to the program or one directory above it).
+// True when `dir` holds the files every Chromium/Electron runtime ships: icudtl.dat,
+// resources.pak and v8_context_snapshot.bin.
+bool hasChromiumRuntime(const Root &root, const QString &dir);
+
+// `canonicalProgram` is an absolute, symlink-free path (without the Root prefix). True when the
+// runtime files are in the program's directory or its parent (VS Code: bin/code). There is no
+// name list; Debian's /usr/bin/chromium wrapper script is not detected (agino-gpu-run --chromium).
 bool isChromiumLike(const Root &root, const QString &canonicalProgram);
 
-// {"--use-angle=vulkan", "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan"}
-QStringList chromiumOffloadArguments();
+// True for an AppImage: ELF magic and bytes 8..10 'A' 'I' 0x02 (type 2). Its contents are only
+// visible when mounted, so the caller probes it (agino-gpu-run).
+bool isAppImage(const Root &root, const QString &path);
 
-// `args` are the arguments after the program. The two switches are prepended (so the user's own
-// switches win) when `environment` ("KEY=VALUE") has __NV_PRIME_RENDER_OFFLOAD=1, the program
-// is Chromium-like and `args` has no --use-angle= switch; otherwise `args` is returned unchanged.
-QStringList withChromiumOffloadArguments(const Root &root, const QString &canonicalProgram,
-                                         const QStringList &args, const QStringList &environment);
+// `args` are the arguments after the program. Only arguments before a literal "--" count.
+// Unchanged when there is a --use-angle= switch or the last --disable-features= lists Vulkan,
+// VulkanFromANGLE or DefaultANGLEVulkan. Otherwise --use-angle=vulkan is inserted at the front and
+// the last --enable-features= is extended in place with the missing features of
+// Vulkan,VulkanFromANGLE,DefaultANGLEVulkan (none: that switch is inserted at the front too).
+QStringList withChromiumOffloadArguments(const QStringList &args);
 
 } // namespace AginoGpu

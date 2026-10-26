@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Sourced by Debian's /usr/bin/chromium wrapper (it resets CHROMIUM_FLAGS first, so an environment
+# variable cannot carry switches; the name starts with zz- because the wrapper sources
+# /etc/chromium.d/* in glob order and this must run last to see the complete CHROMIUM_FLAGS).
+# On X11 with NVIDIA PRIME render offload Chromium's default ANGLE-GL backend fails and falls back
+# to software rendering; ANGLE on Vulkan renders on the NVIDIA GPU (design.md §5.4, V-5). The
+# switches have one implementation, agino-gpu-run; this file only hands over to it.
+
+if [ "${__NV_PRIME_RENDER_OFFLOAD:-}" = 1 ]; then
+    if [ -n "${AGINO_GPU_CHROMIUM_D:-}" ]; then
+        unset AGINO_GPU_CHROMIUM_D   # second pass, agino-gpu-run has done its part
+    elif [ -x /usr/bin/agino-gpu-run ]; then
+        # CHROMIUM_FLAGS is passed in so a --enable-features in it is merged too; the wrapper
+        # rebuilds CHROMIUM_FLAGS on the second pass, the duplicates are identical and harmless.
+        # shellcheck disable=SC2086  # unquoted on purpose: same word splitting as the wrapper's exec
+        AGINO_GPU_CHROMIUM_D=1 exec /usr/bin/agino-gpu-run --chromium -- "$0" $CHROMIUM_FLAGS "$@"
+    fi
+fi

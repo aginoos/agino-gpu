@@ -1,76 +1,115 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "agino-gpu/chromium.h"
 
+#include <QByteArray>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+
+#include <optional>
 
 namespace AginoGpu {
 
 namespace {
 
-bool isKnownName(const QString &name)
+const QStringList &offloadFeatures()
 {
-    static const QStringList names{
-        QStringLiteral("chromium"), QStringLiteral("chromium-browser"), QStringLiteral("chrome"),
-        QStringLiteral("google-chrome"), QStringLiteral("google-chrome-stable"),
-        QStringLiteral("google-chrome-beta"), QStringLiteral("google-chrome-unstable"),
-        QStringLiteral("msedge"), QStringLiteral("microsoft-edge"),
-        QStringLiteral("microsoft-edge-stable"), QStringLiteral("microsoft-edge-beta"),
-        QStringLiteral("microsoft-edge-dev"), QStringLiteral("brave"), QStringLiteral("brave-browser"),
-        QStringLiteral("vivaldi"), QStringLiteral("vivaldi-stable"), QStringLiteral("opera"),
-        QStringLiteral("electron"),
-    };
-    static const QRegularExpression versionedElectron(QStringLiteral("^electron[0-9]+$"));
-    return names.contains(name) || versionedElectron.match(name).hasMatch();
+    static const QStringList features{QStringLiteral("Vulkan"), QStringLiteral("VulkanFromANGLE"),
+                                      QStringLiteral("DefaultANGLEVulkan")};
+    return features;
 }
 
-bool isElectronApp(const Root &root, const QString &dir)
+// Chromium's switch parser: POSIX prefixes are "--" and "-".
+std::optional<QString> switchValue(const QString &arg, const QString &name)
 {
-    for (const QString &base : {dir, dir + QLatin1String("/..")}) {
-        for (const char *rel : {"/resources/app.asar", "/resources/app/package.json"}) {
-            if (root.exists(QDir::cleanPath(base + QLatin1String(rel))))
-                return true;
-        }
+    for (const QString &prefix : {QStringLiteral("--"), QStringLiteral("-")}) {
+        const QString head = prefix + name + QLatin1Char('=');
+        if (arg.startsWith(head))
+            return arg.mid(head.size());
     }
-    return false;
+    return std::nullopt;
 }
 
-bool hasOffloadVariable(const QStringList &environment)
+// "Name<Trial:param/value" -> "Name"
+QString featureName(const QString &item)
 {
-    return environment.contains(QStringLiteral("__NV_PRIME_RENDER_OFFLOAD=1"));
-}
-
-bool hasAngleSwitch(const QStringList &args)
-{
-    for (const QString &arg : args) {
-        if (arg.startsWith(QLatin1String("--use-angle=")))
-            return true;
-    }
-    return false;
+    const qsizetype end = item.indexOf(QRegularExpression(QStringLiteral("[<:]")));
+    return end < 0 ? item : item.left(end);
 }
 
 } // namespace
 
+bool hasChromiumRuntime(const Root &root, const QString &dir)
+{
+    for (const char *name : {"icudtl.dat", "resources.pak", "v8_context_snapshot.bin"}) {
+        if (!root.exists(QDir::cleanPath(dir + QLatin1Char('/') + QLatin1String(name))))
+            return false;
+    }
+    return true;
+}
+
 bool isChromiumLike(const Root &root, const QString &canonicalProgram)
 {
-    const QFileInfo info(canonicalProgram);
-    return isKnownName(info.fileName()) || isElectronApp(root, info.path());
+    const QString dir = QFileInfo(canonicalProgram).path();
+    return hasChromiumRuntime(root, dir) || hasChromiumRuntime(root, dir + QLatin1String("/.."));
 }
 
-QStringList chromiumOffloadArguments()
+bool isAppImage(const Root &root, const QString &path)
 {
-    return {QStringLiteral("--use-angle=vulkan"),
-            QStringLiteral("--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan")};
+    QFile file(root.path(path));
+    if (!file.open(QIODevice::ReadOnly))
+        return false;
+    const QByteArray header = file.read(11);
+    return header.size() == 11 && header.startsWith("\x7f" "ELF") && header[8] == 'A'
+        && header[9] == 'I' && header[10] == 0x02;
 }
 
-QStringList withChromiumOffloadArguments(const Root &root, const QString &canonicalProgram,
-                                         const QStringList &args, const QStringList &environment)
+QStringList withChromiumOffloadArguments(const QStringList &args)
 {
-    if (!hasOffloadVariable(environment) || hasAngleSwitch(args)
-        || !isChromiumLike(root, canonicalProgram))
-        return args;
-    return chromiumOffloadArguments() + args;
+    qsizetype end = args.indexOf(QStringLiteral("--"));
+    if (end < 0)
+        end = args.size();
+
+    qsizetype lastEnable = -1;
+    std::optional<QString> lastDisable;
+    for (qsizetype i = 0; i < end; ++i) {
+        if (switchValue(args.at(i), QStringLiteral("use-angle")))
+            return args;
+        if (switchValue(args.at(i), QStringLiteral("enable-features")))
+            lastEnable = i;
+        if (const auto value = switchValue(args.at(i), QStringLiteral("disable-features")))
+            lastDisable = value;
+    }
+    if (lastDisable) {
+        for (const QString &item : lastDisable->split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+            if (offloadFeatures().contains(featureName(item)))
+                return args;
+        }
+    }
+
+    QStringList result = args;
+    bool needFeatureSwitch = true;
+    if (lastEnable >= 0) {
+        const QString arg = args.at(lastEnable);
+        const QString prefix = arg.startsWith(QLatin1String("--")) ? QStringLiteral("--")
+                                                                   : QStringLiteral("-");
+        QStringList items = switchValue(arg, QStringLiteral("enable-features"))
+                                ->split(QLatin1Char(','), Qt::SkipEmptyParts);
+        QStringList names;
+        for (const QString &item : items)
+            names << featureName(item);
+        for (const QString &feature : offloadFeatures()) {
+            if (!names.contains(feature))
+                items << feature;
+        }
+        result[lastEnable] = prefix + QLatin1String("enable-features=") + items.join(QLatin1Char(','));
+        needFeatureSwitch = false;
+    }
+    if (needFeatureSwitch)
+        result.prepend(QLatin1String("--enable-features=") + offloadFeatures().join(QLatin1Char(',')));
+    result.prepend(QStringLiteral("--use-angle=vulkan"));
+    return result;
 }
 
 } // namespace AginoGpu
