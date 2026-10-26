@@ -72,12 +72,20 @@ bool appImageIsChromium(const QString &path)
     return chromium;
 }
 
-bool isChromiumProgram(const QString &program)
+bool isChromiumProgram(const QString &program, const QStringList &args)
 {
     const AginoGpu::Root root = AginoGpu::Root::fromEnvironment();
     if (AginoGpu::isChromiumLike(root, program))
         return true;
-    return AginoGpu::isAppImage(root, program) && appImageIsChromium(program);
+    if (!AginoGpu::isAppImage(root, program))
+        return false;
+    // The AppImage runtime only treats --appimage-* as its own option when it comes first
+    // (`--appimage-extract`, `--appimage-version`, ...): such a call is not an app launch.
+    for (const QString &arg : args) {
+        if (arg.startsWith(QLatin1String("--appimage-")))
+            return false;
+    }
+    return appImageIsChromium(program);
 }
 
 } // namespace
@@ -122,7 +130,7 @@ int main(int argc, char **argv)
     QStringList extended = args;
     if (environment.contains(QStringLiteral("__NV_PRIME_RENDER_OFFLOAD=1"))) {
         const QString program = forceChromium ? QString() : canonicalProgram(argv[first]);
-        if (forceChromium || (!program.isEmpty() && isChromiumProgram(program)))
+        if (forceChromium || (!program.isEmpty() && isChromiumProgram(program, args)))
             extended = AginoGpu::withChromiumOffloadArguments(args);
     }
     if (extended.size() != args.size()) {
