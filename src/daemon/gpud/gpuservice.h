@@ -64,6 +64,7 @@ private:
     Root m_root;
     QTimer *m_idle = nullptr;
     int m_pending = 0;
+    bool m_setModeInFlight = false; // one interactive authorization at a time
 };
 
 } // namespace AginoGpu

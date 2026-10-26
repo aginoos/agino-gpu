@@ -242,10 +242,19 @@ void GpuService::SetMode(const QString &modeString, const QVariantMap &options)
     const bool force = options.value(QStringLiteral("force")).toBool();
     const Mode target = *mode;
 
+    // Each SetMode may open an authentication dialog; refuse a second one while the first is
+    // still waiting instead of stacking dialogs. Clients use a long call timeout (the user may
+    // take a while to authenticate).
+    if (m_setModeInFlight) {
+        replyError(msg, kErrorFailed, QStringLiteral("another mode change is waiting for authorization"));
+        return;
+    }
+    m_setModeInFlight = true;
     ++m_pending;
     checkAuthorization(this, msg.service(), QString::fromLatin1(kActionSetMode), true,
                        [this, msg, target, force](AuthResult result) {
                            --m_pending;
+                           m_setModeInFlight = false;
                            touch();
                            if (result == AuthResult::Authorized) {
                                finishSetMode(msg, target, force);
@@ -283,9 +292,18 @@ void GpuService::finishSetMode(const QDBusMessage &message, Mode target, bool fo
     }
 
     const Mode previous = readConfiguredMode(m_root);
+    const std::optional<QString> previousMux = hw.mux.available && !hw.mux.sysfsPath.isEmpty()
+        ? m_root.readTrimmed(hw.mux.sysfsPath)
+        : std::nullopt;
     const auto rollback = [&]() {
-        writeConfiguredMode(m_root, previous);
-        applyGeneratedFiles(m_root, hw, previous);
+        QString e;
+        if (!writeConfiguredMode(m_root, previous, &e))
+            qWarning("SetMode rollback: %s", qPrintable(e));
+        if (!applyGeneratedFiles(m_root, hw, previous, &e))
+            qWarning("SetMode rollback: %s", qPrintable(e));
+        if (previousMux && m_root.readTrimmed(hw.mux.sysfsPath) != previousMux
+            && !writeSysfsValue(m_root, hw.mux.sysfsPath, previousMux->toUtf8(), &e))
+            qWarning("SetMode rollback: %s", qPrintable(e));
     };
 
     QString err;

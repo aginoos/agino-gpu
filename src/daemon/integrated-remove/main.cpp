@@ -23,12 +23,17 @@ int main(int argc, char **argv)
         return 0;
 
     const Root root = Root::fromEnvironment();
-    if (readConfiguredMode(root) != Mode::Integrated)
+    if (readConfiguredMode(root) != Mode::Integrated || root.exists(kKeepDgpuPath))
         return 0;
 
+    // Never remove a GPU that may be the only one driving a screen: the firmware MUX routes the
+    // panel to it, no integrated GPU is visible, or it is an external GPU. Connector state is
+    // not known yet (no driver is bound), so agino-gpu-apply checks the displays later and
+    // brings the GPU back if the integrated GPU has none.
     const Hardware hw = detectHardware(root);
     const Gpu *dgpu = hw.discreteGpu();
-    if (!dgpu)
+    if (!dgpu || !hw.integrated() || hw.hardwareClass == HardwareClass::Egpu
+        || (hw.mux.available && hw.mux.dedicatedActive))
         return 0;
     if (addr != dgpu->pciAddress && !dgpu->functions.contains(addr))
         return 0;

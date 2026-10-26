@@ -1,6 +1,7 @@
 [Unit]
 Description=Apply the saved agino GPU mode for this boot
-After=systemd-udevd.service systemd-modules-load.service
+# After coldplug: the PCI devices and asus-nb-wmi (gpu_mux_mode, dgpu_disable) must be visible.
+After=systemd-udevd.service systemd-udev-trigger.service systemd-modules-load.service
 Before=display-manager.service
 
 [Service]

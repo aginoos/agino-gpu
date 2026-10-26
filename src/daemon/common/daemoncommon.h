@@ -17,6 +17,9 @@ namespace AginoGpu {
 
 inline const QString kAsusDgpuDisablePath = QStringLiteral("/sys/devices/platform/asus-nb-wmi/dgpu_disable");
 inline const QString kPciRescanPath = QStringLiteral("/sys/bus/pci/rescan");
+// Created by agino-gpu-apply when an integrated boot has to bring the discrete GPU back; tells
+// agino-gpu-integrated-remove to leave it alone for the rest of this boot.
+inline const QString kKeepDgpuPath = QStringLiteral("/run/agino-gpu/keep-dgpu");
 
 inline int nvidiaGpuCount(const Hardware &hw)
 {
