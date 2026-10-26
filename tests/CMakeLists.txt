@@ -22,3 +22,14 @@ if(AGINO_GPU_BUILD_PLUGINS)
         add_test(NAME ${name} COMMAND ${name})
     endforeach()
 endif()
+
+# tests/manual: tools run by hand (not by ctest), e.g. rendering the quick panel offscreen.
+if(AGINO_GPU_BUILD_PLUGINS)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(DdeTrayLoader REQUIRED)
+    add_executable(qp-harness manual/qp-harness.cpp)
+    target_include_directories(qp-harness PRIVATE ${DDE_TRAY_LOADER_INCLUDE_DIR})
+    target_link_libraries(qp-harness PRIVATE Qt6::Widgets)
+    # the dock headers construct QStrings from char literals
+    target_compile_options(qp-harness PRIVATE -UQT_NO_CAST_FROM_ASCII)
+endif()
