@@ -7,15 +7,12 @@
 namespace AginoGpu::QpTexts {
 
 // Strings only the quick panel needs; everything shared is in agino-gpu-client/texts.h.
-inline QString tr(const char *source)
-{
-    return QCoreApplication::translate("AginoGpuQuickPanel", source);
-}
+// Spelled out as QCoreApplication::translate calls so lupdate finds the context.
 
-inline QString switchFailedTitle() { return tr("Graphics mode switch failed"); }
-inline QString confirmSwitch() { return tr("Switch"); }
-inline QString cancel() { return tr("Cancel"); }
-inline QString dgpuAppsTitle() { return tr("Apps using the discrete GPU"); }
-inline QString genericFailure() { return tr("Could not switch the graphics mode"); }
+inline QString switchFailedTitle() { return QCoreApplication::translate("AginoGpuQuickPanel", "Graphics mode switch failed"); }
+inline QString confirmSwitch() { return QCoreApplication::translate("AginoGpuQuickPanel", "Switch"); }
+inline QString cancel() { return QCoreApplication::translate("AginoGpuQuickPanel", "Cancel"); }
+inline QString dgpuAppsTitle() { return QCoreApplication::translate("AginoGpuQuickPanel", "Apps using the discrete GPU"); }
+inline QString genericFailure() { return QCoreApplication::translate("AginoGpuQuickPanel", "Could not switch the graphics mode"); }
 
 } // namespace AginoGpu::QpTexts
