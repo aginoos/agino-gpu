@@ -190,11 +190,11 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ### 5.4 应用兼容（D-141 第 8 条）
 
-P4 只做内置识别，不做通用的 profiles/*.json 配置机制；不改应用自己的文件。Chromium 类应用（识别规则见下）在带 `__NV_PRIME_RENDER_OFFLOAD=1` 时追加 ANGLE-Vulkan 启动参数，共三处实现、规则一致：Debian 包装脚本读取的 `/etc/chromium.d/agino-gpu`、`agino-gpu-run`（`src/lib/chromium.cpp`）、DAM 补丁（供启动器/任务栏菜单和始终用独显规则）。Flatpak 不在 P4 范围（用户决定 2026-10-26）。
+P4 只做内置识别，不做通用的 profiles/*.json 配置机制；不改应用自己的文件。Chromium 类应用在带 `__NV_PRIME_RENDER_OFFLOAD=1` 时需要 ANGLE-Vulkan 启动参数（5.4.1），**只有一份实现：`agino-gpu-run`（`src/lib/chromium.cpp` + `src/run`）**。DAM 补丁在最终环境含 `__NV_PRIME_RENDER_OFFLOAD=1` 时改为执行 `/usr/bin/agino-gpu-run -- PROGRAM ARGS`（供启动器/任务栏菜单和始终用独显规则，见 5.3 第 1、2 项）；Debian 的 `/etc/chromium.d/zz-agino-gpu`（包装脚本按文件名顺序读取，`zz-` 保证最后执行、看到完整的 `CHROMIUM_FLAGS`）同样交给 `agino-gpu-run --chromium -- /usr/bin/chromium …`。Flatpak 不在 P4 范围（用户决定 2026-10-26）。
 
 | 应用类别 | 问题 | 处理 |
 |---|---|---|
-| Chromium / Chrome / Edge / Electron | 自己选 GPU，X11 下走 EGL（ANGLE），只设 GLX 变量无效；默认 ANGLE-GL 在按需渲染下失败（V-5） | 仅当环境含 `__NV_PRIME_RENDER_OFFLOAD=1`（Mesa 的 DRI_PRIME 不需要）时，在程序后、其他参数前插入 `--use-angle=vulkan --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`（用户自己的开关在后，后者生效；已有 `--use-angle=` 则不加）。识别：规范化（realpath）后的文件名为 chromium、chromium-browser、chrome、google-chrome[-stable/-beta/-unstable]、msedge、microsoft-edge[-stable/-beta/-dev]、brave[-browser]、vivaldi[-stable]、opera、electron、electron<数字>；或 Electron 应用：程序所在目录或其上一级有 `resources/app.asar` 或 `resources/app/package.json`。验证方法：`chrome://gpu` 的 GL_RENDERER |
+| Chromium / Chrome / Edge / Electron | 自己选 GPU，X11 下走 EGL（ANGLE），只设 GLX 变量无效；默认 ANGLE-GL 在按需渲染下失败（V-5） | 仅当环境含 `__NV_PRIME_RENDER_OFFLOAD=1`（Mesa 的 DRI_PRIME 不需要）时由 `agino-gpu-run` 改写参数。**识别不用名字表**，看运行时文件：程序所在目录或其上一级（VS Code 的 `bin/code`）同时有 `icudtl.dat`、`resources.pak`、`v8_context_snapshot.bin`（2026-10-26 在 Debian chromium、Chrome、Edge、Obsidian AppImage 上实测；不用 crashpad 和 `*_percent.pak`，Edge 改了名）。Debian 的 `/usr/bin/chromium` 是包装脚本，不会被识别，由 chromium.d 片段用 `--chromium` 交过来。AppImage（桌面文件指向 .AppImage 文件，内容挂载后才可见）：文件头为 ELF 且第 8..10 字节是 `AI\x02` 时，`agino-gpu-run` 运行 `<文件> --appimage-mount`（读第一行得挂载点，3 秒超时），在挂载点上做同样的运行时文件检查，然后结束这个子进程（精确 PID，不用 pkill）；任何失败都视为非 Chromium，原样启动。改写规则（按 Chromium 的参数语义，5.4.1：同一开关重复时后者生效，FeatureList 只读一个 `--enable-features` 和一个 `--disable-features`，disable 优先，参数解析到字面量 `--` 为止，前缀 `--` 与 `-` 等价；只看 `--` 之前）：已有 `--use-angle=` 则不动；最后一个 `--disable-features=` 含 Vulkan、VulkanFromANGLE、DefaultANGLEVulkan（名字取到第一个 `<` 或 `:`）则不动；有 `--enable-features=` 时就地把最后一个改成“原值 + 缺少的三项”（保持顺序、不重复、保留前缀），没有则在最前面插入 `--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`；最前面再插入 `--use-angle=vulkan`。验证方法：`tests/manual/chromium-gpu-probe`，读 Chromium 自己的 `SystemInfo.getInfo` 报告（不用截图）。 |
 | Flatpak 应用 | 沙箱内需要与主机驱动同版本的 `org.freedesktop.Platform.GL.nvidia-<主>-<次>-<修订>` 运行时，版本不匹配时回退到软件渲染 | 只在装了 `flatpak` 时生效：读 `/sys/module/nvidia/version` 推出扩展名，检查是否已装；没装时快捷面板下级页面和控制中心提示，并提供“安装”（调用 `flatpak install --system flathub <扩展>`，由 flatpak 自己的 polkit 授权，需要网络）。环境变量由 `flatpak run` 传入沙箱（V-6 验证） |
 | Steam | 32 位游戏需要 i386 的 NVIDIA 用户态库；Steam 本身需要按需渲染变量传给游戏 | 规则作用于 Steam 本身，游戏继承；检查 `libnvidia-glcore:i386` 等是否安装，没装时提示（agino 源里是否有 i386 版本要确认，V-7） |
 | Proton / Wine / DXVK / VKD3D-Proton | Vulkan 枚举到两块卡，可能选错 | NVIDIA 用 `__VK_LAYER_NV_optimus=NVIDIA_only` 只暴露独显；Mesa 独显额外设 `DXVK_FILTER_DEVICE_NAME`、`VKD3D_FILTER_DEVICE_NAME`（取自 Vulkan 设备名，由 daemon 检测时记录） |
@@ -320,7 +320,7 @@ agino-gpu/
 ├── src/run/                 # agino-gpu-run
 ├── src/quickpanel/          # 快捷面板插件
 ├── src/dcc/                 # 控制中心插件（C++ + QML）
-├── data/                    # D-Bus/polkit/systemd/udev/lightdm 文件、chromium.d、default-rules
+├── data/                    # D-Bus/polkit/systemd/udev/lightdm 文件、chromium.d/zz-agino-gpu、default-rules
 ├── tests/                   # 单元测试 + sysfs 夹具
 └── docs/
 ```
