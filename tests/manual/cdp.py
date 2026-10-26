@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Minimal Chrome DevTools Protocol client for the tests/manual scripts (standard library only, so it
-# runs on a test machine as is).
+# runs on a test machine as is). A browser that stops answering ends the script with a timeout error
+# instead of hanging it.
 import base64
 import json
 import os
@@ -14,7 +15,7 @@ class Cdp:
     def __init__(self, ws_url):
         host, port = ws_url.split("/")[2].split(":")
         path = "/" + ws_url.split("/", 3)[3]
-        self.sock = socket.create_connection((host, int(port)))
+        self.sock = socket.create_connection((host, int(port)), timeout=120)
         self.sock.send(f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\nUpgrade: websocket\r\n"
                        f"Connection: Upgrade\r\nSec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
                        "Sec-WebSocket-Version: 13\r\n\r\n".encode())
@@ -24,6 +25,8 @@ class Cdp:
             if not chunk:
                 raise ConnectionError("DevTools closed the connection during the handshake")
             buf += chunk
+        if not buf.startswith(b"HTTP/1.1 101"):
+            raise ConnectionError(f"WebSocket handshake refused: {buf.splitlines()[0]!r}")
         self.data = buf.split(b"\r\n\r\n", 1)[1]
         self.next_id = 0
         self.events = []
@@ -74,7 +77,8 @@ class Cdp:
 
 
 def browser(port):
-    return Cdp(json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version"))["webSocketDebuggerUrl"])
+    version = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=10))
+    return Cdp(version["webSocketDebuggerUrl"])
 
 
 def page(port, url_part, wait=30):
@@ -83,7 +87,7 @@ def page(port, url_part, wait=30):
     requestAnimationFrame, which stalls the tests."""
     deadline = time.time() + wait
     while True:
-        pages = [t for t in json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/list"))
+        pages = [t for t in json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=10))
                  if t["type"] == "page" and url_part in t["url"]]
         if pages:
             return Cdp(pages[0]["webSocketDebuggerUrl"])

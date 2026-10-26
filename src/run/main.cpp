@@ -50,8 +50,10 @@ bool appImageIsChromium(const QString &path)
     QProcess mount;
     mount.setProcessChannelMode(QProcess::ForwardedErrorChannel);
     mount.start(path, {QStringLiteral("--appimage-mount")});
-    if (!mount.waitForStarted(3000))
+    if (!mount.waitForStarted(3000)) {
+        std::fputs("agino-gpu-run: cannot inspect the AppImage; running it unchanged\n", stderr);
         return false;
+    }
     QByteArray line;
     QElapsedTimer timer;
     timer.start();
@@ -59,10 +61,13 @@ bool appImageIsChromium(const QString &path)
         if (mount.waitForReadyRead(200) || mount.bytesAvailable() > 0)
             line += mount.readAllStandardOutput();
     }
+    line += mount.readAllStandardOutput(); // what a child that already exited printed last
     const QString mountPoint = QString::fromLocal8Bit(line.left(line.indexOf('\n'))).trimmed();
     bool chromium = false;
     if (line.contains('\n') && mountPoint.startsWith(QLatin1Char('/')))
         chromium = AginoGpu::hasChromiumRuntime(AginoGpu::Root(), mountPoint);
+    else // e.g. no libfuse2, a mount slower than 3 s or a runtime without --appimage-mount
+        std::fputs("agino-gpu-run: cannot mount the AppImage to inspect it; running it unchanged\n", stderr);
     // Ends exactly the child we started (it unmounts on SIGTERM); never pkill.
     mount.terminate();
     if (!mount.waitForFinished(3000)) {

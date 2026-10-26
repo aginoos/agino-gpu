@@ -34,8 +34,10 @@ std::optional<QString> switchValue(const QString &arg, const QString &name)
 // "Name<Trial:param/value" -> "Name"
 QString featureName(const QString &item)
 {
-    const qsizetype end = item.indexOf(QRegularExpression(QStringLiteral("[<:]")));
-    return end < 0 ? item : item.left(end);
+    // Chromium trims whitespace around each name of a feature list.
+    const QString name = item.trimmed();
+    const qsizetype end = name.indexOf(QRegularExpression(QStringLiteral("[<:]")));
+    return end < 0 ? name : name.left(end);
 }
 
 } // namespace

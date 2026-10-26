@@ -106,6 +106,8 @@ private Q_SLOTS:
         QCOMPARE(withChromiumOffloadArguments(L({"--enable-features=Vulkan,A<Trial:p/1"})),
                  L({"--use-angle=vulkan",
                     "--enable-features=Vulkan,A<Trial:p/1,VulkanFromANGLE,DefaultANGLEVulkan"}));
+        QCOMPARE(withChromiumOffloadArguments(L({"--enable-features=A, Vulkan"})),
+                 L({"--use-angle=vulkan", "--enable-features=A, Vulkan,VulkanFromANGLE,DefaultANGLEVulkan"}));
     }
 
     void disabledFeatureKeepsArguments()
@@ -116,6 +118,9 @@ private Q_SLOTS:
         QCOMPARE(withChromiumOffloadArguments(b), b);
         const QStringList c = L({"--disable-features=DefaultANGLEVulkan:x/y", "--enable-features=A"});
         QCOMPARE(withChromiumOffloadArguments(c), c);
+        // Chromium trims whitespace around the names of a feature list.
+        const QStringList d = L({"--disable-features=Foo, Vulkan"});
+        QCOMPARE(withChromiumOffloadArguments(d), d);
     }
 
     void onlyLastDisableFeaturesCounts()

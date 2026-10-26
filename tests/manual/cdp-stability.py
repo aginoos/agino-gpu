@@ -45,7 +45,11 @@ expr = ("JSON.stringify((()=>{const v=document.getElementById('v');const q=v.get
 start = time.time()
 seen, samples = set(), []
 while True:
-    v = json.loads(page.evaluate(expr))
+    value = page.evaluate(expr)  # None while the page is (re)loading
+    if value is None:
+        time.sleep(1)
+        continue
+    v = json.loads(value)
     g = gpu_pids()
     seen.update(g)
     samples.append((time.time() - start, v))
