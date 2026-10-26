@@ -8,7 +8,6 @@
 
 #include <QWidget>
 
-class QPushButton;
 class QTimer;
 class QVBoxLayout;
 
@@ -47,7 +46,6 @@ private:
     GpuState *m_state;
     GpuControl *m_control;
     ModeSwitcher *m_switcher;
-    QPushButton *m_back;
     Dtk::Widget::DLabel *m_dgpuStatus;
     BannerWidget *m_banner;
     ModeList *m_modes;

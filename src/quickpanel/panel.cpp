@@ -10,12 +10,14 @@
 
 #include <DFontSizeManager>
 #include <DLabel>
+#include <DPalette>
 
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QTimer>
 #include <QVBoxLayout>
 
+DGUI_USE_NAMESPACE
 DWIDGET_USE_NAMESPACE
 
 namespace AginoGpu {
@@ -29,7 +31,6 @@ Panel::Panel(GpuState *state, QWidget *parent)
     , m_state(state)
     , m_control(new GpuControl(this))
     , m_switcher(new ModeSwitcher(state, m_control, this))
-    , m_back(new QPushButton(this))
     , m_dgpuStatus(new DLabel(this))
     , m_banner(new BannerWidget(this))
     , m_modes(new ModeList(this))
@@ -39,23 +40,22 @@ Panel::Panel(GpuState *state, QWidget *parent)
 {
     setFixedWidth(Dock::DOCK_POPUP_WIDGET_WIDTH);
 
-    m_back->setFlat(true);
-    m_back->setFocusPolicy(Qt::NoFocus);
-    m_back->setCursor(Qt::PointingHandCursor);
-    m_back->setStyleSheet(QStringLiteral("text-align:left;"));
-    DFontSizeManager::instance()->bind(m_back, DFontSizeManager::T5);
+    // The quick panel draws the "‹ Graphics" title bar of the sub-page itself (dde-shell
+    // SubPluginPage, from pluginDisplayName); the first row here is the discrete GPU's status.
+    auto *dgpuLabel = new DLabel(QpTexts::discreteGpu(), this);
+    DFontSizeManager::instance()->bind(dgpuLabel, DFontSizeManager::T6);
     DFontSizeManager::instance()->bind(m_dgpuStatus, DFontSizeManager::T8);
-    m_dgpuStatus->setForegroundRole(QPalette::PlaceholderText);
+    m_dgpuStatus->setForegroundRole(DPalette::TextTips);
 
     auto *header = new QHBoxLayout;
     header->setContentsMargins(10, 0, 10, 0);
-    header->addWidget(m_back);
+    header->addWidget(dgpuLabel);
     header->addStretch(1);
     header->addWidget(m_dgpuStatus);
 
     auto *usersTitle = new DLabel(QpTexts::dgpuAppsTitle(), m_usersGroup);
     DFontSizeManager::instance()->bind(usersTitle, DFontSizeManager::T6);
-    usersTitle->setForegroundRole(QPalette::PlaceholderText);
+    usersTitle->setForegroundRole(DPalette::TextTips);
     m_usersLayout->setContentsMargins(0, 0, 0, 0);
     m_usersLayout->setSpacing(4);
     m_usersLayout->addWidget(usersTitle);
@@ -83,7 +83,6 @@ Panel::Panel(GpuState *state, QWidget *parent)
     layout->addWidget(settings);
 
     m_usersTimer->setInterval(kUsersIntervalMs);
-    connect(m_back, &QPushButton::clicked, this, &Panel::requestHide);
     connect(settings, &QPushButton::clicked, this, &Panel::openSettings);
     connect(m_modes, &ModeList::modeClicked, m_switcher, &ModeSwitcher::select);
     connect(m_switcher, &ModeSwitcher::changed, this, &Panel::refresh);
@@ -96,7 +95,6 @@ Panel::Panel(GpuState *state, QWidget *parent)
 
 void Panel::refresh()
 {
-    m_back->setText(QStringLiteral("‹ ") + Texts::title());
     m_dgpuStatus->setText(Texts::dgpuStatus(m_state->dgpuStatus()));
     m_banner->setSpec(currentBanner());
     m_modes->setModes(m_state->offeredModes(), m_state->configuredMode(), m_state->activeMode());

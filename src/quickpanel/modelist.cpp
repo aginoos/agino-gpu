@@ -6,6 +6,7 @@
 
 #include <DFontSizeManager>
 #include <DLabel>
+#include <DPalette>
 
 #include <QHBoxLayout>
 #include <QMouseEvent>
@@ -15,6 +16,7 @@
 
 #include <functional>
 
+DGUI_USE_NAMESPACE
 DWIDGET_USE_NAMESPACE
 
 namespace AginoGpu {
@@ -33,7 +35,7 @@ public:
         radio->setAttribute(Qt::WA_TransparentForMouseEvents);
         radio->setFocusPolicy(Qt::NoFocus);
         auto *costLabel = new DLabel(cost, this);
-        costLabel->setForegroundRole(QPalette::PlaceholderText);
+        costLabel->setForegroundRole(DPalette::TextTips);
         DFontSizeManager::instance()->bind(costLabel, DFontSizeManager::T8);
         costLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 

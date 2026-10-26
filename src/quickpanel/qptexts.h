@@ -13,6 +13,7 @@ inline QString switchFailedTitle() { return QCoreApplication::translate("AginoGp
 inline QString confirmSwitch() { return QCoreApplication::translate("AginoGpuQuickPanel", "Switch"); }
 inline QString cancel() { return QCoreApplication::translate("AginoGpuQuickPanel", "Cancel"); }
 inline QString dgpuAppsTitle() { return QCoreApplication::translate("AginoGpuQuickPanel", "Apps using the discrete GPU"); }
+inline QString discreteGpu() { return QCoreApplication::translate("AginoGpuQuickPanel", "Discrete GPU"); }
 inline QString genericFailure() { return QCoreApplication::translate("AginoGpuQuickPanel", "Could not switch the graphics mode"); }
 
 } // namespace AginoGpu::QpTexts

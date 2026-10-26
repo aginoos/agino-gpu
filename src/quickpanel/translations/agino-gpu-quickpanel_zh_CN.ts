@@ -23,5 +23,9 @@
         <source>Could not switch the graphics mode</source>
         <translation>无法切换显卡模式</translation>
     </message>
+    <message>
+        <source>Discrete GPU</source>
+        <translation>独立显卡</translation>
+    </message>
 </context>
 </TS>
