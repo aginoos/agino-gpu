@@ -1,6 +1,6 @@
 # agino-gpu 设计文档
 
-版本：草案 1（2026-10-26）。决策来源：agino infra `docs/decisions.md` D-141。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
+版本：草案 1（2026-10-26；第 7 节按界面草案 3 简化）。决策来源：agino infra `docs/decisions.md` D-141。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
 
 ## 1. 目标与范围
 
@@ -166,11 +166,11 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 ### 5.2 规则存储
 
 - 规则是用户级的：用户 DConfig `org.agino.gpu`（appid `agino-gpu`）。两种规则：
-  - 按应用（`appRules`）：`[{ "appId": "steam", "gpu": "discrete", "onBattery": "keep|ignore" }]`，来自系统里的应用（DAM 的应用列表），或用户浏览选中的 `.desktop` 文件。
-  - 按文件（`pathRules`）：`[{ "path": "/home/u/Games/x/game.x86_64", "gpu": "discrete", "onBattery": "keep|ignore", "launcherEntry": "agino-gpu-<hash>.desktop" }]`，来自控制中心“浏览…”选中的可执行文件、AppImage 或脚本（D-141 补充：允许用户浏览文件指定应用，不只读系统已安装的应用）。路径存规范化后的绝对路径；文件被移动或删除时规则在界面上标“文件不存在”，不自动删除。
+  - 按应用（`appRules`）：`[{ "appId": "steam", "gpu": "discrete" }]`，来自系统里的应用（DAM 的应用列表），或用户浏览选中的 `.desktop` 文件。
+  - 按文件（`pathRules`）：`[{ "path": "/home/u/Games/x/game.x86_64", "gpu": "discrete", "launcherEntry": "agino-gpu-<hash>.desktop" }]`，来自控制中心“浏览…”选中的可执行文件、AppImage 或脚本（D-141 补充：允许用户浏览文件指定应用，不只读系统已安装的应用）。路径存规范化后的绝对路径；文件被移动或删除时规则在界面上标“文件不存在”，不自动删除。
 - 规则落到 DAM：对每个 `gpu=discrete` 的应用，把 5.1 的变量写进 DAM 的 DConfig `org.deepin.dde.application-manager` 子路径 `/<appid>` 的 `appExtraEnvironments`，并在同一列表里加一个标记项 `AGINO_GPU_RULE=1`，用来区分我们写的和用户/其他程序写的；删除规则时只删除我们写的那些项。
 - 按文件的规则不写 DAM 的按应用配置（没有应用标识），由 DAM 补丁在启动时匹配（5.3 第 1 条）。用户勾选“在启动器里创建入口”时，在 `~/.local/share/applications/` 写一个 `agino-gpu-<路径哈希>.desktop`（`Exec` 指向该文件，`Name` 默认取文件名、可改），删除规则时一并删除；入口只是方便启动，规则本身靠路径匹配生效。
-- 电池策略：`onBattery=ignore` 的规则，在切到电池供电时由客户端库把对应项从 DAM 里拿掉（按文件的规则在匹配时跳过），接上电源后恢复。执行者是快捷面板插件（随 dde-tray-loader 在登录时加载并常驻，不需要用户打开面板）；插件被禁用时电池策略不生效，控制中心页面上注明。
+- 电池策略：一个整组开关 `pauseOnBattery`（布尔，默认开），不按条设置（草案 3 简化）。开着时，切到电池供电由客户端库把所有规则项从 DAM 里拿掉（按文件的规则在匹配时跳过），接上电源后恢复。执行者是快捷面板插件（随 dde-tray-loader 在登录时加载并常驻，不需要用户打开面板）；插件被禁用时电池策略不生效（在本文记录，界面上不另加说明）。
 - 内置推荐规则（`/usr/share/agino-gpu/default-rules.json`，例如 Steam、Blender、DaVinci Resolve），用户可关。第一期默认不启用任何规则，只在界面上作为“推荐”列出。
 
 ### 5.3 三个入口
@@ -256,21 +256,21 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 ### 7.1 快捷面板插件（dde-tray-loader 2.0.38，`PluginsItemInterfaceV2`）
 
 - 接口：`interfaces/pluginsiteminterface_v2.h`，IID `com.deepin.dock.PluginsItemInterface_V2`；`flags()` 为 `Dock::Type_Quick | Dock::Quick_Panel_Multi`（两格，与 Wi-Fi、蓝牙同类），不带 `Attribute_CanInsert`（不能拖到任务栏托盘区，按用户要求不提供托盘图标）；元数据 `{"api":"2.0.0","depends-daemon-dbus-service":""}`；安装到 `/usr/lib/dde-dock/plugins/`；模板参照 `plugins/dde-dock/eye-comfort-mode/`。构建用 dde-tray-loader-dev 的 CMake 包 `DdeTrayLoader`（树内插件链接的 `dockpluginmanager-interface` 不在 dev 包里，树外只用头文件，第一步先验证能否编过，V-8）。
-- 磁贴：只在多显卡时出现。左侧圆形图标表示当前模式；标题“显卡”；副标题是模式和独显状态的短写（“混合 · 休眠”“混合 · 工作中”；两格磁贴留给副标题约 6 个汉字），待生效时黄色（“重启后改集显”），上次切换失败时红色（“切换失败”）。整块磁贴点击进入下级页面，不做“一点就开关”。
-- 下级页面（面板内展开，与 Wi-Fi 列表相同的方式：`itemPopupApplet(QUICK_ITEM_KEY)` 返回页面控件，点击磁贴时 `requestSetAppletVisible(..., true)`；按 eye-comfort-mode 的写法实现，V-10 验证）：顶部“‹ 显卡”和独显状态；提示条（待注销/待重启、外接显示器警告、上次开机失败、Flatpak 运行时缺失）；模式单选（标出生效代价，点选只保存，提示条给“撤销 / 稍后 / 立即重启”）；正在使用独显的应用；底部“显卡设置”跳转控制中心。
-- 系统通知：插件加载时若有 `/var/lib/agino-gpu/last-failure`，发一次桌面通知“显卡模式没有切换成功”（“知道了”“查看详情”）；“知道了”后不再提醒。
+- 磁贴：只在多显卡时出现。左侧圆形图标表示当前模式；标题“显卡”；副标题只写当前模式名（“混合”），待生效时黄色“待重启”/“待注销”，上次切换失败时红色“切换失败”；独显是否工作在下级页面看。整块磁贴点击进入下级页面，不做“一点就开关”。
+- 下级页面（面板内展开，与 Wi-Fi 列表相同的方式：`itemPopupApplet(QUICK_ITEM_KEY)` 返回页面控件，点击磁贴时 `requestSetAppletVisible(..., true)`；按 eye-comfort-mode 的写法实现，V-10 验证）：顶部“‹ 显卡”和独显状态（休眠/工作中/已关闭）；最多一条提示条（“重启后切换到集显”［撤销］［立即重启］、“HDMI-1 接在独显上，集显模式下不可用”、“切换到独显优先失败，已恢复为混合”［详情］、“Flatpak 缺少 NVIDIA 运行时”［安装］）；模式单选只有模式名，未选中的项右侧标生效代价（“需重启”“需注销”），不写模式说明；正在使用独显的应用（为空时整组不显示）；底部“显卡设置”跳转控制中心。
+- 系统通知：插件加载时若有 `/var/lib/agino-gpu/last-failure`，发一次桌面通知：标题“显卡模式切换失败”，正文“已恢复为混合”，按钮“详情”；通知关闭后不再提醒。
 - 注销、重启：`org.deepin.dde.SessionManager1` 的注销与 `RequestReboot`（agino 现有代码已在用）。
 
 ### 7.2 控制中心插件（dde-control-center 6.1.103，V25）
 
 - 接口：`include/dccfactory.h`（`dccV25::DccFactory`，IID `org.deepin.dde.dcc-factory/v1.0`，宏 `DCC_FACTORY_CLASS`）；入口 `Gpu.qml` 根对象 `DccObject { name: "gpu"; parentName: "display"; weight: 120 }`（“显示”自己的子项权重 10～110）；安装用 `dcc_install_plugin(NAME gpu TARGET ...)` 到 `plugins_v1.1/gpu/`；`find_package(DdeControlCenter)`；模板参照 `examples/plugin-example/`。
-- 内容：显卡列表（名称、驱动、状态、接了哪些显示器）；模式选择（带每种模式的说明和代价）；按应用使用独显（规则列表，按应用和按文件两种，按文件的标“文件”并显示目录；每条可选电池策略）；兼容（Flatpak 运行时、Steam i386 库）；高级（运行时休眠状态、命令行）。
-- “添加应用”是“显卡”页的下级页面（`DccObject` 子页，路径“显示 › 显卡 › 添加应用”），不弹对话框（D-141 补充）。内容：系统里的应用（DAM 列表，可搜索、多选，已添加的不能重复勾选）；从文件添加（“浏览…”打开 DTK 文件选择窗口，可选可执行文件、AppImage、脚本、`.desktop`；选中程序文件后可选“在启动器里创建入口”，默认开）；“电池供电时暂停这些规则”；底部“取消 / 添加（N）”，添加后返回“显卡”页。
+- 内容（自上而下，分组不加副标题）：提示条（与快捷面板相同，只在有问题时出现，兼容问题如 Flatpak 运行时、Steam i386 库也在这里出现）；显卡列表（名称、“驱动 · 接的显示器”一行、独显状态）；“模式”四张卡片（模式名 + 一句短说明：按需使用独显 / 最省电 / 全部由独显渲染 / 性能最佳；未选中的标生效代价）；“使用独显的应用”（规则列表，按文件的规则多一行目录；每行只有移除按钮；末尾“添加 ›”和整组开关“使用电池时暂停”；非混合模式时整组变灰并标“仅混合模式”）。不设“高级”组（运行时休眠状态、命令行写在文档和 `agino-gpu-run --help` 里）。
+- “添加应用”是“显卡”页的下级页面（`DccObject` 子页，路径“显示 › 显卡 › 添加应用”），不弹对话框（D-141 补充）。内容：搜索框和系统里的应用（DAM 列表，多选，已添加的显示为已勾选且不可改）；“其他程序”组，标题旁一句“从启动器启动时生效”，一行“选择文件…”打开 DTK 文件选择窗口（可选可执行文件、AppImage、脚本、`.desktop`），选中后显示文件名和目录，下面“添加到启动器”开关（默认开）；底部“取消 / 添加（N）”，添加后返回“显卡”页。
 - 只在 `HardwareClass` 不是 `single` 时出现（`DccObject.visible` 绑定）。
 
 ### 7.3 文字
 
-界面文字中英文，翻译走 Qt Linguist（控制中心插件用 `dcc_handle_plugin_translation`）。模式名固定为：混合、集显、独显优先、独显直连；按应用菜单固定为“使用独立显卡运行”。
+原则：布局能说明的不加说明文字，只留最关键的一句并尽量短；状态用颜色和位置表达，不重复写“当前”“已选”之类的标签。界面文字中英文，翻译走 Qt Linguist（控制中心插件用 `dcc_handle_plugin_translation`）。模式名固定为：混合、集显、独显优先、独显直连；按应用菜单固定为“使用独立显卡运行”。
 
 ## 8. 仓库与打包
 
