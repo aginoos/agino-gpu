@@ -19,7 +19,11 @@ QStringList offloadEnvironment(const Gpu &dgpu, int nvidiaCount, const QString &
         }
         env << QStringLiteral("__GLX_VENDOR_LIBRARY_NAME=nvidia")
             << QStringLiteral("__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json")
-            << QStringLiteral("__VK_LAYER_NV_optimus=NVIDIA_only");
+            << QStringLiteral("__VK_LAYER_NV_optimus=NVIDIA_only")
+            // data/xsession/68agino-gpu limits Qt's FFmpeg backend to VA-API for the session
+            // (its CUDA probe loads libcuda and wakes the GPU); an app on the GPU gets CUDA back.
+            << QStringLiteral("QT_FFMPEG_DECODING_HW_DEVICE_TYPES=cuda,vaapi")
+            << QStringLiteral("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES=cuda,vaapi");
         return env;
     }
 

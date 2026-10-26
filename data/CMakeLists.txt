@@ -34,6 +34,8 @@ install(FILES "${GEN}/82-agino-gpu-integrated.rules" DESTINATION lib/udev/rules.
 # lightdm
 install(FILES "${GEN}/90-agino-gpu.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/lightdm/lightdm.conf.d")
 install(PROGRAMS display-setup DESTINATION "${AGINO_GPU_LIBEXECDIR}")
+# Sourced by /etc/X11/Xsession, not run: no execute bit, like the other Xsession.d files
+install(FILES xsession/68agino-gpu DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/X11/Xsession.d")
 
 # Directories the hardened agino-gpud.service lists in ReadWritePaths= (they must exist).
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/agino-gpu")

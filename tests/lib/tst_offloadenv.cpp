@@ -39,6 +39,10 @@ private Q_SLOTS:
             QStringLiteral("__GLX_VENDOR_LIBRARY_NAME=nvidia"),
             QStringLiteral("__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json"),
             QStringLiteral("__VK_LAYER_NV_optimus=NVIDIA_only"),
+            // the session limits Qt's FFmpeg backend to VA-API (data/xsession); an app on the
+            // discrete GPU gets CUDA back (D-145)
+            QStringLiteral("QT_FFMPEG_DECODING_HW_DEVICE_TYPES=cuda,vaapi"),
+            QStringLiteral("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES=cuda,vaapi"),
         };
         QCOMPARE(offloadEnvironment(nvidia()), expected);
         // the Vulkan device name is only used for Mesa GPUs
@@ -48,7 +52,7 @@ private Q_SLOTS:
     void nvidiaMultiple()
     {
         const QStringList env = offloadEnvironment(nvidia(), 2);
-        QCOMPARE(env.size(), 5);
+        QCOMPARE(env.size(), 7);
         QCOMPARE(env.at(0), QStringLiteral("__NV_PRIME_RENDER_OFFLOAD=1"));
         QCOMPARE(env.at(1), QStringLiteral("__NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0"));
         QCOMPARE(env.at(2), QStringLiteral("__GLX_VENDOR_LIBRARY_NAME=nvidia"));

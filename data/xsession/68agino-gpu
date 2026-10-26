@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Sourced by /etc/X11/Xsession (POSIX sh; dde-session passes the result on to the systemd user
+# manager). Qt's FFmpeg media backend probes CUDA when it starts: that loads libcuda, which
+# opens /dev/nvidia* and wakes a sleeping NVIDIA GPU, so every Qt app that plays a sound or video
+# (the control center, the music player) powers the discrete GPU up in hybrid mode. Limit the
+# probe to VA-API, which decodes on the integrated GPU (D-145). offload.env exists only in hybrid
+# mode with a usable discrete GPU (design.md §5.1); apps run on the discrete GPU get
+# "cuda,vaapi" from it. Values the user set are kept.
+
+if grep -q '^__NV_PRIME_RENDER_OFFLOAD=' "${AGINO_GPU_ROOT:-}/run/agino-gpu/offload.env" 2>/dev/null; then
+    export QT_FFMPEG_DECODING_HW_DEVICE_TYPES="${QT_FFMPEG_DECODING_HW_DEVICE_TYPES:-vaapi}"
+    export QT_FFMPEG_ENCODING_HW_DEVICE_TYPES="${QT_FFMPEG_ENCODING_HW_DEVICE_TYPES:-vaapi}"
+fi

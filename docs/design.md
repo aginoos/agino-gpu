@@ -151,7 +151,11 @@ __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0     # 多块 NVIDIA 时指定；单
 __GLX_VENDOR_LIBRARY_NAME=nvidia
 __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json
 __VK_LAYER_NV_optimus=NVIDIA_only
+QT_FFMPEG_DECODING_HW_DEVICE_TYPES=cuda,vaapi
+QT_FFMPEG_ENCODING_HW_DEVICE_TYPES=cuda,vaapi
 ```
+
+Qt 多媒体的 FFmpeg 后端启动时探测 CUDA，加载 `libcuda` 会打开 `/dev/nvidia*`、唤醒休眠的独显，混合模式下控制中心、音乐等任何用 Qt 多媒体的程序一启动独显就醒（2026-10-26 在 105 上实测：控制中心停在“个性化”页独显也从 suspended 变 active；设成只用 VA-API 后保持 suspended）。所以 `/etc/X11/Xsession.d/68agino-gpu` 在 `offload.env` 里有 `__NV_PRIME_RENDER_OFFLOAD` 时（混合模式、独显是 NVIDIA）给整个会话设 `QT_FFMPEG_DECODING_HW_DEVICE_TYPES=vaapi` 和 `QT_FFMPEG_ENCODING_HW_DEVICE_TYPES=vaapi`（用户自己设过的不改；dde-session 会把 Xsession 的环境带进 systemd 用户实例），用独显的应用由上面两行恢复 CUDA（D-145）。独显优先、独显直连、集显、单显卡的机器都不设。
 
 `__EGL_VENDOR_LIBRARY_FILENAMES` 是为 Chromium/Electron（X11 上走 EGL/ANGLE）加的，NVIDIA EGL 在 X11 按需渲染下是否正常要在 157 上验证（V-5）；不正常就只对 Chromium 类应用改走 Vulkan（见 5.4）。
 
