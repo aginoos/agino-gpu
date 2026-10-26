@@ -222,7 +222,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 |---|---|---|
 | `CheckMode(s mode) → a(ss)` | 无 | 返回检查结果（级别、文字），不改任何东西 |
 | `SetMode(s mode, a{sv} options)` | `org.agino.gpu.set-mode`：活动本地会话的管理员 `auth_admin_keep` | `options.force`(b) 用于确认警告 |
-| `GetDgpuUsers() → a(uss)` | 无 | 打开了独显设备节点的进程（pid、uid、名字）；只返回调用者自己的进程，管理员授权后返回全部 |
+| `GetDgpuUsers() → a(uus)` | 无 | 打开了独显设备节点的进程（pid、uid、名字）；只返回调用者自己的进程，管理员授权后返回全部 |
 
 客户端库同时提供 `Gpu1` 不运行时的降级：只读 sysfs 显示状态，不能切换。
 
