@@ -18,7 +18,7 @@
 | `agino-gpu-apply` | 开机时在显示管理器之前运行的一次性服务，把已保存的模式落实到本次启动 |
 | `agino-gpu-run` | 命令行启动器（类似 `prime-run`），用独显运行任意命令；也是兼容配置的唯一实现 |
 | `libagino-gpu` | 客户端库：D-Bus 封装、sysfs 只读状态、按应用规则、环境变量集合 |
-| 托盘插件 | dde-tray-loader V2 插件 + 快捷面板磁贴 |
+| 快捷面板插件 | dde-tray-loader V2 插件：快捷面板里的两格“显卡”磁贴（与 Wi-Fi、蓝牙同类）和面板内的下级页面；不提供单独的任务栏托盘图标（D-141 补充） |
 | 控制中心插件 | dde-control-center V25 插件，“显示”下的子页“显卡” |
 | 补丁（infra 里的移植包） | dde-application-manager 认 `PrefersNonDefaultGPU`；dde-launchpad 和 dde-shell 任务栏的“使用独立显卡运行”右键菜单 |
 
@@ -34,7 +34,7 @@ daemon 启动时分类，界面和可选模式都由分类决定。
 | H2 带 MUX 的混合笔记本 | H1 + 检测到 MUX 接口（第一期：`/sys/devices/platform/asus-nb-wmi/gpu_mux_mode`） | 全部模式 |
 | H3 台式机 | 无内置屏幕（无 eDP/LVDS 连接器）；显示器接在哪块卡由连接器状态判断 | 显示器接集显：混合、集显、按应用规则；接独显：只显示状态和按应用规则（不提供集显模式） |
 | H4 外接显卡坞（eGPU） | 独显的 PCI 路径经过 Thunderbolt（`/sys/bus/thunderbolt` 下的设备，或 `removable` 属性） | 混合 + 按应用规则；拔出时规则自动失效；不提供集显/独显优先（热插拔下不安全） |
-| H0 单显卡 | 只有一块 GPU | 托盘和控制中心都不出现；`agino-gpu-run` 原样运行命令并提示 |
+| H0 单显卡 | 只有一块 GPU | 快捷面板磁贴和控制中心入口都不出现；`agino-gpu-run` 原样运行命令并提示 |
 
 厂商：
 
@@ -82,7 +82,7 @@ daemon 维护三个量：
 1. `SetMode` 只写配置，不在运行中拆卸驱动或改 X；所有落实都在下次开机或 X 服务器启动时完成。这样任何一步失败都不会把当前会话弄坏。
 2. 从 `mux-dedicated` 或改到 `mux-dedicated`，`PendingAction` 一定是 `reboot`。
 3. 不同时排队两种操作：已有待生效的模式时再次 `SetMode`，以最后一次为准。
-4. 开机时落实失败（例如 `dedicated` 下 Xorg 起不来），`agino-gpu-apply` 回退到 `hybrid`，把失败原因写进 `/var/lib/agino-gpu/last-failure`，下次登录托盘提示。
+4. 开机时落实失败（例如 `dedicated` 下 Xorg 起不来），`agino-gpu-apply` 回退到 `hybrid`，把失败原因写进 `/var/lib/agino-gpu/last-failure`，下次登录由快捷面板插件发桌面通知，磁贴副标题变红。
 
 ### 3.3 切换前检查（`SetMode` 返回错误或警告）
 
@@ -165,19 +165,22 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ### 5.2 规则存储
 
-- 规则是用户级的：用户 DConfig `org.agino.gpu`（appid `agino-gpu`），键 `appRules`：`[{ "appId": "steam", "gpu": "discrete", "onBattery": "keep|ignore" }]`。
+- 规则是用户级的：用户 DConfig `org.agino.gpu`（appid `agino-gpu`）。两种规则：
+  - 按应用（`appRules`）：`[{ "appId": "steam", "gpu": "discrete", "onBattery": "keep|ignore" }]`，来自系统里的应用（DAM 的应用列表），或用户浏览选中的 `.desktop` 文件。
+  - 按文件（`pathRules`）：`[{ "path": "/home/u/Games/x/game.x86_64", "gpu": "discrete", "onBattery": "keep|ignore", "launcherEntry": "agino-gpu-<hash>.desktop" }]`，来自控制中心“浏览…”选中的可执行文件、AppImage 或脚本（D-141 补充：允许用户浏览文件指定应用，不只读系统已安装的应用）。路径存规范化后的绝对路径；文件被移动或删除时规则在界面上标“文件不存在”，不自动删除。
 - 规则落到 DAM：对每个 `gpu=discrete` 的应用，把 5.1 的变量写进 DAM 的 DConfig `org.deepin.dde.application-manager` 子路径 `/<appid>` 的 `appExtraEnvironments`，并在同一列表里加一个标记项 `AGINO_GPU_RULE=1`，用来区分我们写的和用户/其他程序写的；删除规则时只删除我们写的那些项。
-- 电池策略：`onBattery=ignore` 的规则，在切到电池供电时由客户端库把对应项从 DAM 里拿掉，接上电源后恢复。执行者是托盘插件（常驻在 dde-tray-loader 里）；托盘插件被禁用时电池策略不生效，控制中心页面上注明。
+- 按文件的规则不写 DAM 的按应用配置（没有应用标识），由 DAM 补丁在启动时匹配（5.3 第 1 条）。用户勾选“在启动器里创建入口”时，在 `~/.local/share/applications/` 写一个 `agino-gpu-<路径哈希>.desktop`（`Exec` 指向该文件，`Name` 默认取文件名、可改），删除规则时一并删除；入口只是方便启动，规则本身靠路径匹配生效。
+- 电池策略：`onBattery=ignore` 的规则，在切到电池供电时由客户端库把对应项从 DAM 里拿掉（按文件的规则在匹配时跳过），接上电源后恢复。执行者是快捷面板插件（随 dde-tray-loader 在登录时加载并常驻，不需要用户打开面板）；插件被禁用时电池策略不生效，控制中心页面上注明。
 - 内置推荐规则（`/usr/share/agino-gpu/default-rules.json`，例如 Steam、Blender、DaVinci Resolve），用户可关。第一期默认不启用任何规则，只在界面上作为“推荐”列出。
 
 ### 5.3 三个入口
 
-1. **`.desktop` 声明**：DAM 补丁在 `ApplicationService::appendExtraEnvironments`（dde-application-manager 1.2.59，`src/dbus/applicationservice.cpp:113-155`）里，DConfig 合并之后、追加 `DSG_APP_ID` 之前：桌面文件 `PrefersNonDefaultGPU=true` 或 `X-KDE-RunOnDiscreteGpu=true`，且 `/run/agino-gpu/offload.env` 存在时，追加其中的变量。补丁不链接 agino-gpu，只读这个文件，文件不存在则什么也不做。
+1. **`.desktop` 声明**：DAM 补丁在 `ApplicationService::appendExtraEnvironments`（dde-application-manager 1.2.59，`src/dbus/applicationservice.cpp:113-155`）里，DConfig 合并之后、追加 `DSG_APP_ID` 之前：桌面文件 `PrefersNonDefaultGPU=true` 或 `X-KDE-RunOnDiscreteGpu=true`，且 `/run/agino-gpu/offload.env` 存在时，追加其中的变量。同一处再做按文件匹配：把桌面文件 `Exec` 的程序解析为绝对路径（`realpath`），与用户 DConfig `org.agino.gpu` 的 `pathRules` 比较，命中则同样追加。补丁不链接 agino-gpu，只读这个文件和 DConfig，文件不存在则什么也不做。按文件的规则因此对“从启动器、任务栏或任何 `Exec` 指向这个文件的桌面入口启动”生效；在文件管理器里双击可执行文件、或在终端直接运行时不经过 DAM，不生效（终端里用 `agino-gpu-run`），界面上写明。
 2. **右键“使用独立显卡运行”**（仅本次）：
    - 启动器 dde-launchpad 2.0.45：`qml/AppItemMenu.qml` 在“打开”后加菜单项；`DesktopIntegration` 加 `launchByDesktopIdWithEnv(desktopId, env)`；`AppMgr::launchApp` 增加 env 参数，给 `dde-am` 追加 `--env K=V`。
    - 任务栏 dde-shell 2.0.52：`panels/dock/taskmanager/globals.h` 加 `DOCK_ACTION_RUN_DGPU`；`DockGlobalElementModel::getMenus` 加菜单项；`requestNewInstance` 处理它，同样用 `dde-am --env`。
    - 两处都只在 `offload.env` 存在时显示菜单项，env 也从该文件读取。
-3. **按应用规则**：控制中心和托盘的“始终用独显”，见 5.2。
+3. **按应用 / 按文件规则**：控制中心里的“始终用独显”，见 5.2。
 
 ### 5.4 应用兼容（D-141 第 8 条）
 
@@ -186,7 +189,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 | 应用类别 | 问题 | 处理 |
 |---|---|---|
 | Chromium / Chrome / Edge / Electron | 自己选 GPU，X11 下走 EGL（ANGLE），只设 GLX 变量无效；有 GPU 黑名单 | 加 `__EGL_VENDOR_LIBRARY_FILENAMES`（5.1）；若 V-5 不通过，配置改为追加 `--use-angle=vulkan`（需要启动参数，DAM 规则改用 Exec 覆盖 `org.deepin.dde.am.appoverride`）。识别 Electron：可执行文件旁有 `resources/app.asar` 或链接 `libnode`。验证方法：`chrome://gpu` 的 GL_RENDERER |
-| Flatpak 应用 | 沙箱内需要与主机驱动同版本的 `org.freedesktop.Platform.GL.nvidia-<主>-<次>-<修订>` 运行时，版本不匹配时回退到软件渲染 | 只在装了 `flatpak` 时生效：读 `/sys/module/nvidia/version` 推出扩展名，检查是否已装；没装时托盘和控制中心提示，并提供“安装”（调用 `flatpak install --system flathub <扩展>`，由 flatpak 自己的 polkit 授权，需要网络）。环境变量由 `flatpak run` 传入沙箱（V-6 验证） |
+| Flatpak 应用 | 沙箱内需要与主机驱动同版本的 `org.freedesktop.Platform.GL.nvidia-<主>-<次>-<修订>` 运行时，版本不匹配时回退到软件渲染 | 只在装了 `flatpak` 时生效：读 `/sys/module/nvidia/version` 推出扩展名，检查是否已装；没装时快捷面板下级页面和控制中心提示，并提供“安装”（调用 `flatpak install --system flathub <扩展>`，由 flatpak 自己的 polkit 授权，需要网络）。环境变量由 `flatpak run` 传入沙箱（V-6 验证） |
 | Steam | 32 位游戏需要 i386 的 NVIDIA 用户态库；Steam 本身需要按需渲染变量传给游戏 | 规则作用于 Steam 本身，游戏继承；检查 `libnvidia-glcore:i386` 等是否安装，没装时提示（agino 源里是否有 i386 版本要确认，V-7） |
 | Proton / Wine / DXVK / VKD3D-Proton | Vulkan 枚举到两块卡，可能选错 | NVIDIA 用 `__VK_LAYER_NV_optimus=NVIDIA_only` 只暴露独显；Mesa 独显额外设 `DXVK_FILTER_DEVICE_NAME`、`VKD3D_FILTER_DEVICE_NAME`（取自 Vulkan 设备名，由 daemon 检测时记录） |
 | 一般 Vulkan 程序 | 同上 | 同上 |
@@ -244,24 +247,25 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ### 6.5 不唤醒独显
 
-托盘和控制中心只读：`/sys/bus/pci/devices/<addr>/power/runtime_status`、`power/runtime_suspended_time`、`/sys/class/drm/card*/status`、`/proc/*/fd` 的链接目标（判断谁打开了 `/dev/nvidia*` 或独显的 `renderD*`）。禁止调用 `nvidia-smi`、`xrandr --listproviders`、`vulkaninfo`、`glxinfo`、打开独显设备节点。轮询：托盘图标每 10 秒、弹窗打开时每 2 秒；`runtime_status` 变化没有 uevent，只能轮询，读一个 sysfs 文件的代价可以忽略。
+快捷面板插件和控制中心只读：`/sys/bus/pci/devices/<addr>/power/runtime_status`、`power/runtime_suspended_time`、`/sys/class/drm/card*/status`、`/proc/*/fd` 的链接目标（判断谁打开了 `/dev/nvidia*` 或独显的 `renderD*`）。禁止调用 `nvidia-smi`、`xrandr --listproviders`、`vulkaninfo`、`glxinfo`、打开独显设备节点。轮询：只在快捷面板打开时进行（磁贴每 10 秒、下级页面打开时每 2 秒），面板关闭时不轮询；`runtime_status` 变化没有 uevent，只能轮询，读一个 sysfs 文件的代价可以忽略。
 
 ## 7. 界面
 
 界面设计稿：[docs/ui/agino-gpu-ui.html](ui/agino-gpu-ui.html)（浏览器直接打开，可切换场景演示各种状态）。设计稿经用户同意后才开始实现（D-141 补充）。
 
-### 7.1 托盘插件（dde-tray-loader 2.0.38，`PluginsItemInterfaceV2`）
+### 7.1 快捷面板插件（dde-tray-loader 2.0.38，`PluginsItemInterfaceV2`）
 
-- 接口：`interfaces/pluginsiteminterface_v2.h`，IID `com.deepin.dock.PluginsItemInterface_V2`；`flags()` 为 `Dock::Type_Quick | Dock::Quick_Panel_Single | Dock::Attribute_Normal`；元数据 `{"api":"2.0.0","depends-daemon-dbus-service":""}`；安装到 `/usr/lib/dde-dock/plugins/`；模板参照 `plugins/dde-dock/eye-comfort-mode/`。构建用 dde-tray-loader-dev 的 CMake 包 `DdeTrayLoader`（树内插件链接的 `dockpluginmanager-interface` 不在 dev 包里，树外只用头文件，第一步先验证能否编过，V-8）。
-- 图标：模式（混合/集显/独显）+ 独显状态角标（休眠/工作中）。
-- 弹窗：当前模式和待生效提示（“注销后生效”“重启后生效”，带按钮）；模式选择；正在使用独显的应用；Flatpak/Steam 等兼容提示；“显卡设置”跳转控制中心。
-- 快捷面板磁贴：显示模式和独显状态，点击展开弹窗（不在磁贴上直接切换，因为切换要注销/重启）。
+- 接口：`interfaces/pluginsiteminterface_v2.h`，IID `com.deepin.dock.PluginsItemInterface_V2`；`flags()` 为 `Dock::Type_Quick | Dock::Quick_Panel_Multi`（两格，与 Wi-Fi、蓝牙同类），不带 `Attribute_CanInsert`（不能拖到任务栏托盘区，按用户要求不提供托盘图标）；元数据 `{"api":"2.0.0","depends-daemon-dbus-service":""}`；安装到 `/usr/lib/dde-dock/plugins/`；模板参照 `plugins/dde-dock/eye-comfort-mode/`。构建用 dde-tray-loader-dev 的 CMake 包 `DdeTrayLoader`（树内插件链接的 `dockpluginmanager-interface` 不在 dev 包里，树外只用头文件，第一步先验证能否编过，V-8）。
+- 磁贴：只在多显卡时出现。左侧圆形图标表示当前模式；标题“显卡”；副标题是模式和独显状态的短写（“混合 · 休眠”“混合 · 工作中”；两格磁贴留给副标题约 6 个汉字），待生效时黄色（“重启后改集显”），上次切换失败时红色（“切换失败”）。整块磁贴点击进入下级页面，不做“一点就开关”。
+- 下级页面（面板内展开，与 Wi-Fi 列表相同的方式：`itemPopupApplet(QUICK_ITEM_KEY)` 返回页面控件，点击磁贴时 `requestSetAppletVisible(..., true)`；按 eye-comfort-mode 的写法实现，V-10 验证）：顶部“‹ 显卡”和独显状态；提示条（待注销/待重启、外接显示器警告、上次开机失败、Flatpak 运行时缺失）；模式单选（标出生效代价，点选只保存，提示条给“撤销 / 稍后 / 立即重启”）；正在使用独显的应用；底部“显卡设置”跳转控制中心。
+- 系统通知：插件加载时若有 `/var/lib/agino-gpu/last-failure`，发一次桌面通知“显卡模式没有切换成功”（“知道了”“查看详情”）；“知道了”后不再提醒。
 - 注销、重启：`org.deepin.dde.SessionManager1` 的注销与 `RequestReboot`（agino 现有代码已在用）。
 
 ### 7.2 控制中心插件（dde-control-center 6.1.103，V25）
 
 - 接口：`include/dccfactory.h`（`dccV25::DccFactory`，IID `org.deepin.dde.dcc-factory/v1.0`，宏 `DCC_FACTORY_CLASS`）；入口 `Gpu.qml` 根对象 `DccObject { name: "gpu"; parentName: "display"; weight: 120 }`（“显示”自己的子项权重 10～110）；安装用 `dcc_install_plugin(NAME gpu TARGET ...)` 到 `plugins_v1.1/gpu/`；`find_package(DdeControlCenter)`；模板参照 `examples/plugin-example/`。
-- 内容：显卡列表（名称、驱动、状态、接了哪些显示器）；模式选择（带每种模式的说明和代价）；按应用规则（从已安装应用里添加，来源是 DAM 的应用列表，含电池策略）；兼容（Flatpak 运行时、Steam i386 库）；高级（运行时休眠状态、上次失败原因）。
+- 内容：显卡列表（名称、驱动、状态、接了哪些显示器）；模式选择（带每种模式的说明和代价）；按应用使用独显（规则列表，按应用和按文件两种，按文件的标“文件”并显示目录；每条可选电池策略）；兼容（Flatpak 运行时、Steam i386 库）；高级（运行时休眠状态、命令行）。
+- “添加应用”是“显卡”页的下级页面（`DccObject` 子页，路径“显示 › 显卡 › 添加应用”），不弹对话框（D-141 补充）。内容：系统里的应用（DAM 列表，可搜索、多选，已添加的不能重复勾选）；从文件添加（“浏览…”打开 DTK 文件选择窗口，可选可执行文件、AppImage、脚本、`.desktop`；选中程序文件后可选“在启动器里创建入口”，默认开）；“电池供电时暂停这些规则”；底部“取消 / 添加（N）”，添加后返回“显卡”页。
 - 只在 `HardwareClass` 不是 `single` 时出现（`DccObject.visible` 绑定）。
 
 ### 7.3 文字
@@ -276,7 +280,7 @@ agino-gpu/
 ├── src/lib/                 # libagino-gpu（检测、sysfs、环境变量、规则、D-Bus 客户端）
 ├── src/daemon/              # agino-gpud、agino-gpu-apply、display-setup、integrated-remove
 ├── src/run/                 # agino-gpu-run
-├── src/tray/                # 托盘插件
+├── src/quickpanel/          # 快捷面板插件
 ├── src/dcc/                 # 控制中心插件（C++ + QML）
 ├── data/                    # D-Bus/polkit/systemd/udev/lightdm 文件、profiles、default-rules
 ├── tests/                   # 单元测试 + sysfs 夹具
@@ -284,7 +288,7 @@ agino-gpu/
 ```
 
 - C++17（与 Qt 6.8 和 DTK 一致），Qt6 Core/DBus（daemon 不链接 Gui），插件用 DTK6 Widget / Qt Quick。
-- 一个二进制包 `agino-gpu`（daemon、apply、run、库、系统文件、托盘插件、控制中心插件），直接依赖 dde-tray-loader、dde-control-center、dde-application-manager 等 DDE 组件：它只为 agino 而做，不拆“通用服务 + DDE 插件”（D-141 补充）。agino-desktop-dde 加 Recommends。
+- 一个二进制包 `agino-gpu`（daemon、apply、run、库、系统文件、快捷面板插件、控制中心插件），直接依赖 dde-tray-loader、dde-control-center、dde-application-manager 等 DDE 组件：它只为 agino 而做，不拆“通用服务 + DDE 插件”（D-141 补充）。agino-desktop-dde 加 Recommends。
 - 打包按 D-42：本仓库打标签（无 `v` 前缀），infra 加 `packages/agino-gpu/seed.json`。DAM、dde-launchpad、dde-shell 的补丁放 infra 各自的移植包，提版本。
 
 ## 9. 测试
@@ -296,7 +300,7 @@ agino-gpu/
 
 ### 9.2 虚拟机（build 上）
 
-- 单显卡虚拟机：托盘和控制中心不出现，`agino-gpu-run` 正常透传。
+- 单显卡虚拟机：快捷面板磁贴和控制中心入口不出现，`agino-gpu-run` 正常透传。
 - 补丁：启动器/任务栏菜单项在 `offload.env` 不存在时不出现；用伪造的 `offload.env` 验证 `dde-am --env` 确实把变量传给了应用进程（读 `/proc/<pid>/environ`）。
 
 ### 9.3 真机（157：Arrow Lake 集显 + RTX 5080，可能有 MUX）
@@ -314,7 +318,9 @@ agino-gpu/
 | V-5 | NVIDIA EGL 在 X11 按需渲染下是否正常 | Chromium/Electron 走 EGL 还是 Vulkan |
 | V-6 | `flatpak run` 是否把这些变量带进沙箱 | Flatpak 方案 |
 | V-7 | agino 源里 NVIDIA 用户态库有没有 i386 | Steam 32 位游戏 |
-| V-8 | 托盘插件能否只靠 dde-tray-loader-dev 树外编译 | 构建方式 |
+| V-8 | 快捷面板插件能否只靠 dde-tray-loader-dev 树外编译 | 构建方式 |
+| V-10 | 两格磁贴点击后在面板内展开下级页面的接口（`itemPopupApplet` + `requestSetAppletVisible`）在 dde-shell 2.0.52 上的行为 | 快捷面板下级页面 |
+| V-11 | DAM 补丁按 `Exec` 程序路径匹配的可靠性（带参数、`env` 前缀、AppImage、脚本解释器） | 按文件的规则 |
 | V-9 | 157 是否有 `gpu_mux_mode`，切换后重启的实际流程 | `mux-dedicated` |
 
 ## 10. 分期
@@ -323,10 +329,10 @@ agino-gpu/
 |---|---|---|
 | P0 | 运行时休眠修复（infra，6.4） | — |
 | P1 | 库、daemon、apply、`agino-gpu-run`、单元测试 | — |
-| P2 | 托盘插件、控制中心插件 | P1 |
+| P2 | 快捷面板插件、控制中心插件 | P1 |
 | P3 | DAM / dde-launchpad / dde-shell 补丁 | P1（`offload.env` 格式） |
 | P4 | 兼容配置（Chromium/Electron、Flatpak、Steam/Proton） | P1 |
 | P5 | `integrated`、`dedicated`、`mux-dedicated` 在 157 上实测和修正 | P1、P0 |
 | P6 | AMD、Intel 独显、台式机、eGPU 真机测试 | 有设备时 |
 
-P1–P4 可并行分给子 agent（文件所有权：`src/lib`+`src/daemon`+`src/run`、`src/tray`、`src/dcc`、infra 补丁各一份，接口以本文第 5、6 节为准）；构建、测试、集成由主 agent 做。
+P1–P4 可并行分给子 agent（文件所有权：`src/lib`+`src/daemon`+`src/run`、`src/quickpanel`、`src/dcc`、infra 补丁各一份，接口以本文第 5、6 节为准）；构建、测试、集成由主 agent 做。

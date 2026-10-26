@@ -10,9 +10,9 @@
   --accent: #0081ff; --accent-soft: rgba(0,129,255,.12); --accent-ink: #ffffff;
   --win: #f7f7f7; --panel: #ffffff; --row: rgba(0,0,0,.04); --row-hover: rgba(0,0,0,.07);
   --side: #ececec; --text: #000000d9; --text2: #00000080; --line: rgba(0,0,0,.08);
-  --popup: rgba(250,250,250,.94); --dock: rgba(235,235,235,.92); --shadow: 0 8px 28px rgba(0,0,0,.18);
+  --popup: rgba(250,250,250,.96); --dock: rgba(235,235,235,.92); --shadow: 0 8px 28px rgba(0,0,0,.18);
   --ok: #19a05c; --warn: #d98a00; --warn-soft: rgba(217,138,0,.13); --bad: #e5484d; --bad-soft: rgba(229,72,77,.12);
-  --sleep: #8a96a3;
+  --sleep: #8a96a3; --tile-off: rgba(0,0,0,.12); --tile-off-ink: #00000099;
   --f-ui: "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --f-mono: "Noto Sans Mono CJK SC", "DejaVu Sans Mono", ui-monospace, monospace;
 }
@@ -21,41 +21,43 @@
   --accent: #2f8cff; --accent-soft: rgba(47,140,255,.2); --accent-ink: #ffffff;
   --win: #202020; --panel: #2a2a2a; --row: rgba(255,255,255,.05); --row-hover: rgba(255,255,255,.09);
   --side: #1b1b1b; --text: #ffffffde; --text2: #ffffff85; --line: rgba(255,255,255,.09);
-  --popup: rgba(40,40,40,.95); --dock: rgba(30,30,30,.92); --shadow: 0 8px 28px rgba(0,0,0,.55);
+  --popup: rgba(40,40,40,.96); --dock: rgba(30,30,30,.92); --shadow: 0 8px 28px rgba(0,0,0,.55);
   --ok: #3cc47c; --warn: #f0a52a; --warn-soft: rgba(240,165,42,.16); --bad: #ff6b6f; --bad-soft: rgba(255,107,111,.15);
-  --sleep: #7d8894; color-scheme: dark } }
+  --sleep: #7d8894; --tile-off: rgba(255,255,255,.14); --tile-off-ink: #ffffffaa; color-scheme: dark } }
 :root[data-theme="dark"] {
   --page: #15191e; --ink: #e4e9ef; --muted: #9aa6b2; --rule: #2b333c; --note: #1c2228;
   --accent: #2f8cff; --accent-soft: rgba(47,140,255,.2); --accent-ink: #ffffff;
   --win: #202020; --panel: #2a2a2a; --row: rgba(255,255,255,.05); --row-hover: rgba(255,255,255,.09);
   --side: #1b1b1b; --text: #ffffffde; --text2: #ffffff85; --line: rgba(255,255,255,.09);
-  --popup: rgba(40,40,40,.95); --dock: rgba(30,30,30,.92); --shadow: 0 8px 28px rgba(0,0,0,.55);
+  --popup: rgba(40,40,40,.96); --dock: rgba(30,30,30,.92); --shadow: 0 8px 28px rgba(0,0,0,.55);
   --ok: #3cc47c; --warn: #f0a52a; --warn-soft: rgba(240,165,42,.16); --bad: #ff6b6f; --bad-soft: rgba(255,107,111,.15);
-  --sleep: #7d8894; color-scheme: dark }
+  --sleep: #7d8894; --tile-off: rgba(255,255,255,.14); --tile-off-ink: #ffffffaa; color-scheme: dark }
 
 * { box-sizing: border-box }
 body { background: var(--page); color: var(--ink); font: 14px/1.6 var(--f-ui); }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 40px }
 h1 { font-size: 26px; line-height: 1.3; margin: 0; text-wrap: balance; letter-spacing: .01em }
 h2 { font-size: 19px; margin: 0; text-wrap: balance }
-h3 { font-size: 15px; margin: 0 }
 p { margin: 0; max-width: 68ch }
 .lede { color: var(--muted); display: grid; gap: 6px }
 .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase }
-code { font-family: var(--f-mono); font-size: 12.5px; background: var(--row); padding: 1px 5px; border-radius: 4px }
+code { font-family: var(--f-mono); font-size: 12.5px; background: var(--row); padding: 1px 5px; border-radius: 4px; word-break: break-all }
 section { display: grid; gap: 16px }
 .sechead { display: grid; gap: 4px; border-top: 1px solid var(--rule); padding-top: 18px }
+.changes { background: var(--note); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; display: grid; gap: 6px; font-size: 13px }
+.changes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px }
 
-/* scenario switch */
 .scen { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--page); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-bottom: 1px solid var(--rule) }
 .scen span { color: var(--muted); font-size: 13px; margin-right: 4px }
 .scen button { font: inherit; font-size: 13px; border: 1px solid var(--rule); background: var(--note); color: var(--ink); padding: 5px 12px; border-radius: 16px; cursor: pointer }
 .scen button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
-button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+button:focus-visible, [role="radio"]:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 
-.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 24px; align-items: start }
+.stage { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 32px; align-items: start }
 @media (max-width: 860px) { .stage { grid-template-columns: minmax(0,1fr) } }
 .frame { overflow-x: auto; padding: 4px }
+.pair { display: flex; gap: 24px; align-items: flex-start; width: max-content }
+.cap { font-size: 12px; color: var(--muted); margin-bottom: 8px }
 .notes { display: grid; gap: 10px; font-size: 13px; color: var(--muted) }
 .notes b { color: var(--ink); font-weight: 600 }
 .notes ol, .notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px }
@@ -72,81 +74,103 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
 .btn { font: inherit; font-size: 13px; height: 30px; padding: 0 14px; border-radius: 8px; border: none; background: var(--row-hover); color: var(--text); cursor: pointer; white-space: nowrap }
 .btn.primary { background: var(--accent); color: var(--accent-ink) }
 .btn.link { background: transparent; color: var(--accent); padding: 0 4px }
-
-/* taskbar */
-.dockbar { display: flex; align-items: center; justify-content: flex-end; gap: 4px; background: var(--dock); border-radius: 12px; padding: 6px 10px; width: max-content; box-shadow: var(--shadow) }
-.trayicon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; position: relative; color: var(--text) }
-.trayicon.on { background: var(--row-hover) }
-.trayicon .badge { position: absolute; right: 4px; bottom: 4px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--dock) }
-.clock { font-size: 12px; text-align: right; line-height: 1.2; padding-left: 6px; color: var(--text) }
-
-/* tray popup */
-.popup { width: 340px; background: var(--popup); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; display: grid; gap: 12px; backdrop-filter: blur(20px) }
-.pophead { display: flex; align-items: center; gap: 10px }
-.pophead .t { font-size: 15px; font-weight: 600 }
-.pophead .s { font-size: 12px; color: var(--text2) }
 .banner { border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; font-size: 12.5px; line-height: 1.5 }
 .banner.info { background: var(--accent-soft) }
 .banner.warn { background: var(--warn-soft) }
 .banner.bad { background: var(--bad-soft) }
 .banner .acts { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap }
-.group { background: var(--row); border-radius: 10px; overflow: hidden }
+.radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--text2); display: grid; place-items: center; flex: none }
+[aria-checked="true"] > .radio, [aria-checked="true"] .top > .radio { border-color: var(--accent); background: var(--accent) }
+[aria-checked="true"] > .radio::after, [aria-checked="true"] .top > .radio::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-ink) }
+.appico { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; flex: none }
+.appico.file { background: var(--row-hover); color: var(--text2) }
+.chk { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--text2); flex: none; display: grid; place-items: center; cursor: pointer }
+.chk.on { background: var(--accent); border-color: var(--accent) }
+.chk.on::after { content: ""; width: 8px; height: 4px; border: 2px solid var(--accent-ink); border-top: none; border-right: none; transform: rotate(-45deg) translateY(-1px) }
+.chk.dis { opacity: .4; cursor: default }
+
+/* quick panel */
+.qpanel { width: 352px; background: var(--popup); border-radius: 16px; box-shadow: var(--shadow); padding: 12px; backdrop-filter: blur(20px) }
+.qgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px }
+.qt { background: var(--row); border-radius: 12px; min-height: 64px }
+.qt.small { display: grid; place-items: center; gap: 2px; font-size: 11.5px; color: var(--text2); text-align: center; padding: 6px }
+.qt.small .c { width: 30px; height: 30px; border-radius: 50%; background: var(--tile-off); display: grid; place-items: center; color: var(--tile-off-ink); font-size: 11px }
+.qt.two { grid-column: span 2; display: grid; grid-template-columns: minmax(0,1fr) 28px; align-items: stretch; overflow: hidden }
+.qt.two .main { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 8px; align-items: center; padding: 8px 0 8px 10px; min-width: 0 }
+.qt.two .c { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink) }
+.qt.two.off .c { background: var(--tile-off); color: var(--tile-off-ink) }
+.qt.two .n { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.qt.two .s { font-size: 11.5px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.qt.two .go { display: grid; place-items: center; color: var(--text2); border-left: 1px solid var(--line); cursor: pointer; font-size: 16px }
+.qt.two.gpu { cursor: pointer; outline: 2px dashed var(--accent); outline-offset: 2px }
+.qt.two.gpu .go { color: var(--text) }
+.qslider { grid-column: span 4; background: var(--row); border-radius: 12px; height: 40px; display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 8px; padding: 0 12px; color: var(--text2); font-size: 11px }
+.qslider i { display: block; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) 62%, var(--tile-off) 62%) }
+.qsub { display: grid; gap: 12px }
+.qhead { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 6px }
+.qback { width: 28px; height: 28px; border-radius: 8px; border: none; background: var(--row-hover); color: var(--text); font: inherit; font-size: 16px; cursor: pointer }
+.qhead .t { font-size: 15px; font-weight: 600 }
 .gtitle { font-size: 12px; color: var(--text2); padding: 2px 4px 6px }
+.group { background: var(--row); border-radius: 10px; overflow: hidden }
 .opt { display: grid; grid-template-columns: 18px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; border-top: 1px solid var(--line) }
 .opt:first-child { border-top: none }
 .opt:hover { background: var(--row-hover) }
-.opt[aria-disabled="true"] { opacity: .45; cursor: not-allowed }
-.radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--text2); display: grid; place-items: center }
-.opt[aria-checked="true"] .radio, .mode[aria-checked="true"] .radio { border-color: var(--accent) !important; background: var(--accent) }
-.opt[aria-checked="true"] .radio::after, .mode[aria-checked="true"] .radio::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-ink) }
 .opt .n { font-weight: 500 }
 .opt .d { font-size: 12px; color: var(--text2); line-height: 1.45 }
-.applist { display: grid }
 .app { display: grid; grid-template-columns: 26px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--line) }
 .app:first-child { border-top: none }
-.appico { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff }
 .app .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-.app .d { font-size: 11.5px; color: var(--text2) }
+.app .d { font-size: 11.5px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .empty { padding: 12px; font-size: 12.5px; color: var(--text2); text-align: center }
-.popfoot { display: flex; justify-content: space-between; align-items: center }
+.qfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px }
+.dockbar { display: flex; align-items: center; justify-content: flex-end; gap: 4px; background: var(--dock); border-radius: 12px; padding: 6px 10px; width: max-content; box-shadow: var(--shadow); margin-left: auto }
+.trayicon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: var(--text) }
+.trayicon.on { background: var(--row-hover) }
+.clock { font-size: 12px; text-align: right; line-height: 1.2; padding-left: 6px; color: var(--text) }
 
-/* quick panel */
-.qpanel { width: 340px; background: var(--popup); border-radius: 14px; box-shadow: var(--shadow); padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px }
-.qtile { background: var(--row); border-radius: 10px; min-height: 64px; display: grid; place-items: center; gap: 2px; font-size: 11.5px; color: var(--text2); text-align: center; padding: 6px }
-.qtile.wide { grid-column: span 2; grid-template-columns: 34px minmax(0,1fr) 14px; place-items: center start; text-align: left; gap: 8px; padding: 8px 10px; cursor: pointer }
-.qtile.wide .n { color: var(--text); font-size: 13px; font-weight: 500 }
-.qtile.ghost { opacity: .55 }
-.qicon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink) }
+/* notification */
+.notify { width: 380px; background: var(--popup); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; display: grid; grid-template-columns: 36px minmax(0,1fr); gap: 12px }
+.notify .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); display: grid; place-items: center }
+.notify .t { font-weight: 600 }
+.notify .b { font-size: 12.5px; color: var(--text2); line-height: 1.5 }
+.notify .acts { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end }
 
 /* context menus */
 .menus { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start }
 .menu { width: 230px; background: var(--popup); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; display: grid }
-.menu .mi { padding: 6px 12px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px }
+.menu .mi { padding: 6px 12px; border-radius: 6px }
 .menu .mi.new { background: var(--accent); color: var(--accent-ink) }
 .menu .sep { height: 1px; background: var(--line); margin: 4px 8px }
-.menucap { font-size: 12px; color: var(--muted); margin-bottom: 8px }
 
 /* control center */
-.dcc { width: 900px; height: 640px; background: var(--win); border-radius: 12px; box-shadow: var(--shadow); display: grid; grid-template-columns: 210px minmax(0,1fr); overflow: hidden }
+.dcc { width: 900px; height: 680px; background: var(--win); border-radius: 12px; box-shadow: var(--shadow); display: grid; grid-template-columns: 210px minmax(0,1fr); overflow: hidden }
 .dside { background: var(--side); padding: 44px 10px 10px; display: grid; align-content: start; gap: 2px }
 .dside .search { height: 30px; border-radius: 8px; background: var(--row-hover); margin: 0 4px 10px; display: flex; align-items: center; padding: 0 10px; color: var(--text2); font-size: 12px }
 .nav { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--text) }
 .nav.sel { background: var(--accent); color: var(--accent-ink) }
 .nav .ni { width: 22px; height: 22px; border-radius: 6px; background: var(--row-hover); display: grid; place-items: center; font-size: 11px }
 .nav.sel .ni { background: rgba(255,255,255,.25) }
-.dmain { display: grid; grid-template-rows: 44px minmax(0,1fr); min-width: 0 }
+.dmain { display: grid; grid-template-rows: 44px minmax(0,1fr) auto; min-width: 0; min-height: 0 }
 .titlebar { display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 13px; color: var(--text2) }
 .titlebar .crumb b { color: var(--text); font-weight: 500 }
+.titlebar .crumb a { color: var(--text2); cursor: pointer; text-decoration: none }
+.titlebar .crumb a:hover { color: var(--accent) }
 .titlebar .wc { margin-left: auto; display: flex; gap: 14px; color: var(--text2) }
-.dcontent { overflow-y: auto; padding: 4px 28px 28px; display: grid; gap: 18px; align-content: start }
+.dcontent { overflow-y: auto; padding: 4px 28px 28px; display: grid; gap: 18px; align-content: start; min-height: 0 }
+.dfoot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 28px; border-top: 1px solid var(--line); background: var(--win) }
 .dgroup { display: grid; gap: 6px }
-.dgroup > .h { font-size: 14px; font-weight: 600; padding: 0 2px; display: flex; align-items: baseline; gap: 10px }
+.dgroup > .h { font-size: 14px; font-weight: 600; padding: 0 2px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap }
 .dgroup > .h .sub { font-weight: 400; font-size: 12px; color: var(--text2) }
 .card { background: var(--panel); border-radius: 10px; overflow: hidden }
 .crow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); min-height: 48px }
 .crow:first-child { border-top: none }
+.crow.link { cursor: pointer }
+.crow.link:hover { background: var(--row) }
 .crow .n { font-weight: 500 }
 .crow .d { font-size: 12px; color: var(--text2); line-height: 1.5 }
+.crow .lead { display: flex; gap: 12px; align-items: center; min-width: 0 }
+.crow .lead > div { min-width: 0 }
+.crow .lead .d { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .gpu { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; gap: 14px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line) }
 .gpu:first-child { border-top: none }
 .gpuico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--row-hover); color: var(--text) }
@@ -161,34 +185,31 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
 .mode .d { font-size: 12px; color: var(--text2); line-height: 1.55 }
 .mode .facts { display: flex; flex-wrap: wrap; gap: 6px }
 .mode .now { position: absolute; top: 12px; right: 12px }
-.switch { width: 38px; height: 22px; border-radius: 11px; background: var(--row-hover); position: relative; flex: none }
+.switch { width: 38px; height: 22px; border-radius: 11px; background: var(--row-hover); position: relative; flex: none; cursor: pointer; border: none; padding: 0 }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3) }
 .switch.on { background: var(--accent) }
 .switch.on::after { left: 19px }
 .select { height: 30px; border-radius: 8px; background: var(--row-hover); padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap }
 .ctrls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end }
-
-/* display main page snippet */
+.searchbox { height: 32px; border-radius: 8px; background: var(--row-hover); display: flex; align-items: center; padding: 0 10px; color: var(--text2); font-size: 12.5px }
 .dispsnip { width: 640px; background: var(--win); border-radius: 12px; box-shadow: var(--shadow); padding: 18px 22px; display: grid; gap: 8px }
-
-/* dialog */
-.dialog { width: 420px; background: var(--popup); border-radius: 14px; box-shadow: var(--shadow); padding: 18px; display: grid; gap: 12px }
-.dialog .search { height: 32px; border-radius: 8px; background: var(--row-hover); display: flex; align-items: center; padding: 0 10px; color: var(--text2); font-size: 12.5px }
-.dialog .acts { display: flex; justify-content: flex-end; gap: 8px }
-.chk { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--text2) }
-.chk.on { background: var(--accent); border-color: var(--accent) }
-
-.legend { display: flex; flex-wrap: wrap; gap: 18px; align-items: center }
-.legend > div { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--muted); text-align: center; width: 96px }
-.legend .trayicon { background: var(--dock) }
-@media (prefers-reduced-motion: no-preference) { .opt, .mode, .btn { transition: background .15s, border-color .15s } }
+@media (prefers-reduced-motion: no-preference) { .opt, .mode, .btn, .crow.link { transition: background .15s, border-color .15s } }
 </style>
 
 <div class="wrap">
   <header class="lede">
-    <div class="eyebrow">agino-gpu · 界面设计稿 · 草案 1 · 2026-10-26</div>
-    <h1>agino-gpu 托盘插件与控制中心“显卡”页</h1>
-    <p>以 157（Arrow Lake 集显 + RTX 5080 Laptop，带 MUX）为例。按 DDE V25 / DTK 的外观画，浅色深色跟随系统。模式可以点击，用来演示切换流程；上方的场景切换展示各种状态下的样子。只是界面稿，不代表最终像素。</p>
+    <div class="eyebrow">agino-gpu · 界面设计稿 · 草案 2 · 2026-10-26</div>
+    <h1>agino-gpu 快捷面板与控制中心“显卡”页</h1>
+    <p>以 157（Arrow Lake 集显 + RTX 5080 Laptop，带 MUX）为例，按 DDE V25 / DTK 的外观画，浅色深色跟随系统。点击可以操作：进入快捷面板的下级页面、选模式、在控制中心添加应用。上方的场景切换展示各种状态。只是界面稿，不代表最终像素。</p>
+    <div class="changes">
+      <b>相对草案 1 的改动（按你的意见）</b>
+      <ul>
+        <li>去掉单独的托盘图标。多显卡时，快捷面板里加一个与 Wi-Fi、蓝牙同样的两格磁贴，点进去是面板内的下级页面，在里面选模式。</li>
+        <li>控制中心“添加应用”不再弹出对话框，改为“显卡”页里的下级页面。</li>
+        <li>除了系统已安装的应用，还可以浏览文件，指定任意程序（例如解压即用的游戏、AppImage）。</li>
+        <li>没有托盘图标后，“上次开机切换失败”改用系统通知提醒。</li>
+      </ul>
+    </div>
   </header>
 
   <nav class="scen" aria-label="场景">
@@ -203,59 +224,61 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
 
   <section>
     <div class="sechead">
-      <div class="eyebrow">托盘</div>
-      <h2>任务栏图标</h2>
-      <p class="lede">一个图标同时表示两件事：当前模式（图形）和独显此刻的状态（右下角圆点）。鼠标悬停显示文字提示，例如“混合模式 · 独显休眠中”。</p>
-    </div>
-    <div class="legend" id="legend"></div>
-  </section>
-
-  <section>
-    <div class="sechead">
-      <div class="eyebrow">托盘</div>
-      <h2>点击图标后的弹窗</h2>
+      <div class="eyebrow">快捷面板</div>
+      <h2>“显卡”磁贴和下级页面</h2>
+      <p class="lede">左边是快捷面板首页（虚线框是新增的磁贴），右边是点进去之后的下级页面。点左边的磁贴或右边的“‹”可以来回切换。</p>
     </div>
     <div class="stage">
       <div class="frame">
-        <div style="display:grid; gap:10px; justify-items:end; width:max-content">
-          <div class="popup mock" id="popup"></div>
-          <div class="dockbar mock" aria-hidden="true">
-            <div class="trayicon" title="网络"><svg class="ico" viewBox="0 0 20 20"><path d="M2 8a12 12 0 0 1 16 0M5 11a8 8 0 0 1 10 0M8 14a3.5 3.5 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="16.5" r="1.2" fill="currentColor"/></svg></div>
-            <div class="trayicon" title="声音"><svg class="ico" viewBox="0 0 20 20"><path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor"/><path d="M13 7a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-            <div class="trayicon on" id="dockgpu"></div>
-            <div class="trayicon" title="电池"><svg class="ico" viewBox="0 0 20 20"><rect x="2" y="6" width="14" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="8" width="8" height="4" rx="1" fill="currentColor"/><rect x="16.5" y="8.5" width="1.5" height="3" rx=".5" fill="currentColor"/></svg></div>
-            <div class="clock">14:32<br>10月26日</div>
+        <div class="pair">
+          <div><div class="cap">快捷面板首页</div><div class="qpanel mock" id="qhome"></div></div>
+          <div><div class="cap">下级页面：显卡</div><div class="qpanel mock" id="qsub"></div>
+            <div class="dockbar mock" aria-hidden="true" style="margin-top:10px">
+              <div class="trayicon"><svg class="ico" viewBox="0 0 20 20"><path d="M2 8a12 12 0 0 1 16 0M5 11a8 8 0 0 1 10 0M8 14a3.5 3.5 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="16.5" r="1.2" fill="currentColor"/></svg></div>
+              <div class="trayicon"><svg class="ico" viewBox="0 0 20 20"><path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor"/><path d="M13 7a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+              <div class="trayicon"><svg class="ico" viewBox="0 0 20 20"><rect x="2" y="6" width="14" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="8" width="8" height="4" rx="1" fill="currentColor"/><rect x="16.5" y="8.5" width="1.5" height="3" rx=".5" fill="currentColor"/></svg></div>
+              <div class="trayicon on" title="快捷面板"><svg class="ico" viewBox="0 0 20 20"><rect x="3" y="3" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="11" y="3" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="3" y="11" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="11" y="11" width="6" height="6" rx="1.5" fill="currentColor"/></svg></div>
+              <div class="clock">14:32<br>10月26日</div>
+            </div>
           </div>
         </div>
       </div>
       <div class="notes">
-        <p><b>从上到下</b></p>
+        <p><b>磁贴</b>（两格，与 Wi-Fi、蓝牙并排）</p>
+        <ul>
+          <li>只在检测到两块及以上显卡时出现；单显卡机器上没有这个磁贴，任务栏也不放任何图标。</li>
+          <li>左侧圆形图标表示当前模式；标题“显卡”；副标题是当前模式和独显状态的短写，例如“混合 · 休眠”“混合 · 工作中”（两格磁贴留给副标题的宽度与 Wi-Fi 相同，约 6 个汉字）。待生效时副标题变黄（“重启后改集显”），上次切换失败时变红（“切换失败”）。</li>
+          <li>整块磁贴点击都进入下级页面。没有“一点就开关”的动作，因为切换模式要注销或重启。</li>
+        </ul>
+        <p><b>下级页面</b>（在快捷面板内展开，和 Wi-Fi 列表一样，“‹”返回）</p>
         <ol>
-          <li>标题行：图标、“显卡”、当前生效的模式和独显状态。</li>
-          <li>提示条（只在需要时出现）：待注销/待重启、切换警告、上次开机失败、Flatpak 运行时缺失。按钮直接执行注销、重启或撤销。</li>
-          <li>模式：单选列表，右侧标出生效代价（立即、需注销、需重启）。点一个模式只是保存，提示条给出“立即重启 / 稍后”。机器不支持的模式不显示（例如没有 MUX 就没有“独显直连”）。</li>
-          <li>正在使用独显的应用：读 <code>/proc</code>，不唤醒独显；弹窗打开时每 2 秒刷新。</li>
+          <li>提示条（只在需要时出现）：待注销/待重启、外接显示器警告、上次开机失败、Flatpak 运行时缺失。</li>
+          <li>模式：单选，右侧标出生效代价。点一个模式只是保存，提示条给出“撤销 / 稍后 / 立即重启”。不支持的模式不显示。切换需要管理员授权。</li>
+          <li>正在使用独显的应用：只读 <code>/proc</code>，不唤醒独显；页面打开时每 2 秒刷新。</li>
           <li>底部：“显卡设置”打开控制中心的“显示 → 显卡”。</li>
         </ol>
-        <p>切换模式需要管理员授权（polkit，同一会话内记住一段时间）。</p>
       </div>
     </div>
   </section>
 
   <section>
     <div class="sechead">
-      <div class="eyebrow">托盘</div>
-      <h2>快捷面板磁贴</h2>
-      <p class="lede">占两格（与“护眼模式”等同级）。显示模式和独显状态；点击展开上面的弹窗，不在磁贴上直接切换，因为切换要注销或重启。</p>
+      <div class="eyebrow">系统通知</div>
+      <h2>上次开机切换失败</h2>
+      <p class="lede">登录后由快捷面板插件发出一次（插件随 dde-tray-loader 在登录时加载，不需要用户打开面板）。点“知道了”后不再提醒；磁贴副标题保持红色直到下次成功切换或清除。</p>
     </div>
-    <div class="frame"><div class="qpanel mock" id="qpanel"></div></div>
+    <div class="frame"><div class="notify mock">
+      <span class="ic"><svg class="ico" viewBox="0 0 20 20"><path d="M10 3 18 17H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 8v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="14.6" r="1" fill="currentColor"/></svg></span>
+      <div><div class="t">显卡模式没有切换成功</div><div class="b">上次开机时“独显优先”没有生效，已自动回到“混合”。原因：图形服务未能使用 NVIDIA 显卡。</div></div>
+      <div class="acts"><button class="btn" type="button">知道了</button><button class="btn primary" type="button">查看详情</button></div>
+    </div></div>
   </section>
 
   <section>
     <div class="sechead">
       <div class="eyebrow">控制中心</div>
       <h2>“显示”页里的入口</h2>
-      <p class="lede">放在“显示”页现有设置的最后（权重 120）。只在双显卡机器上出现。右侧显示当前模式，待生效时显示“重启后改为集显”。</p>
+      <p class="lede">放在“显示”页现有设置的最后（权重 120），只在多显卡机器上出现。右侧显示当前模式，待生效时显示“重启后改为集显”。</p>
     </div>
     <div class="frame"><div class="dispsnip mock" id="dispsnip"></div></div>
   </section>
@@ -263,40 +286,39 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
   <section>
     <div class="sechead">
       <div class="eyebrow">控制中心</div>
-      <h2>显示 → 显卡</h2>
+      <h2>显示 → 显卡，以及下级页面“添加应用”</h2>
+      <p class="lede">在“按应用使用独显”里点“添加应用”进入下级页面（顶部路径变为 显示 › 显卡 › 添加应用），点路径里的“显卡”或“取消”返回。在下级页面里可以勾选已安装的应用，也可以点“浏览…”指定文件。</p>
     </div>
     <div class="frame"><div class="dcc mock" id="dcc"></div></div>
     <div class="notes">
-      <p><b>五个分组</b></p>
+      <p><b>“显卡”页的五组</b></p>
       <ul>
-        <li><b>显卡</b>：每块卡的名称、驱动和版本、接了哪些显示器、独显当前状态。状态只读 sysfs。</li>
-        <li><b>显卡模式</b>：四张卡片，写清楚效果和代价（耗电、需注销/重启、外接口限制）。当前生效的标“当前”，已保存但未生效的标“重启后生效”。</li>
-        <li><b>按应用使用独显</b>：只在混合模式下起作用，其他模式下整组置灰并说明原因。每条规则可选“电池供电时暂停”。下面列出推荐应用（默认不启用）。</li>
-        <li><b>应用兼容</b>：只列出检测到的情况。没装 Flatpak 就不显示 Flatpak 那一行；没装 Steam 就不显示 32 位库。</li>
-        <li><b>高级</b>：独显运行时休眠是否在工作（被省电设置关掉时说明原因）、上次切换失败的记录、命令行用法 <code>agino-gpu-run</code>。</li>
+        <li><b>显卡</b>：每块卡的名称、驱动和版本、接了哪些显示器、独显当前状态（只读 sysfs）。</li>
+        <li><b>显卡模式</b>：四张卡片，写清效果和代价；当前生效的标“当前”，已保存未生效的标“重启后生效”。</li>
+        <li><b>按应用使用独显</b>：只在混合模式下起作用，其他模式下整组置灰并说明原因。规则分两种：系统里的应用（按应用标识），和从文件添加的程序（按文件路径，标“文件”）。每条可选“电池供电时暂停”。</li>
+        <li><b>应用兼容</b>：只列出检测到的情况（没装 Flatpak 就不显示 Flatpak 那一行）。</li>
+        <li><b>高级</b>：独显运行时休眠是否在工作、命令行用法。</li>
+      </ul>
+      <p><b>“添加应用”下级页面</b></p>
+      <ul>
+        <li><b>系统里的应用</b>：来自应用管理器的列表，可搜索、多选；已添加的标“已添加”且不能重复勾选。</li>
+        <li><b>从文件添加</b>：“浏览…”打开系统的文件选择窗口，可选可执行文件、AppImage、脚本或 <code>.desktop</code> 文件。选中 <code>.desktop</code> 时按应用处理；选中程序文件时按路径记规则。</li>
+        <li><b>按路径的规则何时生效</b>：从启动器、任务栏，或任何 <code>Exec</code> 指向这个文件的桌面入口启动时生效（应用管理器补丁按程序路径匹配）。在文件管理器里双击、或从终端直接运行时不生效，终端里用 <code>agino-gpu-run</code>。为此页面上可选“在启动器里创建入口”，默认勾选，名称取自文件名，可改。</li>
+        <li>底部“添加”保存并回到“显卡”页；“取消”直接返回。</li>
       </ul>
     </div>
   </section>
 
   <section>
     <div class="sechead">
-      <div class="eyebrow">控制中心</div>
-      <h2>添加应用</h2>
-      <p class="lede">“按应用使用独显”里点“添加应用”弹出。应用列表来自应用管理器，可搜索、可多选。</p>
-    </div>
-    <div class="frame"><div class="dialog mock" id="dialog"></div></div>
-  </section>
-
-  <section>
-    <div class="sechead">
       <div class="eyebrow">右键菜单</div>
       <h2>启动器与任务栏</h2>
-      <p class="lede">只在混合模式、且有可用独显时出现，紧跟在“打开”之后，作用只限这一次。高亮的是新增项。</p>
+      <p class="lede">不变：只在混合模式且有可用独显时出现，紧跟在“打开”之后，作用只限这一次。高亮的是新增项。</p>
     </div>
     <div class="frame"><div class="menus mock">
-      <div><div class="menucap">启动器（dde-launchpad）</div>
+      <div><div class="cap">启动器（dde-launchpad）</div>
         <div class="menu"><div class="mi">打开</div><div class="mi new">使用独立显卡运行</div><div class="sep"></div><div class="mi">从开始菜单取消固定</div><div class="mi">发送到桌面</div><div class="mi">发送到任务栏</div><div class="mi">开机自动启动</div><div class="sep"></div><div class="mi">卸载</div></div></div>
-      <div><div class="menucap">任务栏（dde-shell）</div>
+      <div><div class="cap">任务栏（dde-shell）</div>
         <div class="menu"><div class="mi">Blender</div><div class="mi new">使用独立显卡运行</div><div class="sep"></div><div class="mi">从任务栏取消驻留</div><div class="mi">关闭所有</div></div></div>
     </div></div>
   </section>
@@ -321,7 +343,7 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
       d: "日常推荐。集显负责桌面，独显空闲时休眠；在“按应用使用独显”里指定的应用，或右键“使用独立显卡运行”的应用改用独显。",
       facts: [["accent", "推荐"], ["", "耗电：低"], ["", "所有接口可用"]] },
     { id: "integrated", name: "集显", cost: "需重启", popd: "完全不用独显，最省电",
-      d: "完全不用独显：驱动不加载、独显断电。适合长时间用电池办公。接在独显上的 HDMI/DP 接口不能用，需要独显的应用会退回集显或无法运行。",
+      d: "完全不用独显：驱动不加载、独显断电。适合长时间用电池办公。接在独显上的 HDMI/DP 接口不能用。",
       facts: [["", "耗电：最低"], ["warn", "独显接口不可用"], ["", "重启后生效"]] },
     { id: "dedicated", name: "独显优先", cost: "需注销", popd: "所有程序由独显渲染，集显只输出画面",
       d: "所有程序由独显渲染，画面经集显送到屏幕。适合接电源长时间游戏、3D 和视频剪辑。独显一直工作，耗电和发热明显增加。",
@@ -334,81 +356,85 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
   var SCEN = {
     idle:    { active: "hybrid", configured: "hybrid", dgpu: "sleep", users: [], banner: null },
     busy:    { active: "hybrid", configured: "hybrid", dgpu: "active", users: [["Steam", "#1b2838", "S", "规则：始终用独显"], ["Blender", "#e87d0d", "B", "本次用独显运行"]], banner: "flatpak" },
-    pending: { active: "hybrid", configured: "integrated", dgpu: "sleep", users: [], banner: "pending" },
+    pending: { active: "hybrid", configured: "integrated", dgpu: "sleep", users: [], banner: null },
     ext:     { active: "hybrid", configured: "hybrid", dgpu: "active", users: [], banner: "ext", ext: true },
     fail:    { active: "hybrid", configured: "hybrid", dgpu: "sleep", users: [], banner: "fail" },
     mux:     { active: "mux", configured: "mux", dgpu: "active", users: [], banner: null }
   };
+  var INSTALLED = [["Steam", "#1b2838", "S", "steam"], ["Blender", "#e87d0d", "B", "blender"], ["DaVinci Resolve", "#3a3f4b", "D", "resolve"],
+    ["Godot Engine", "#478cbf", "G", "godot"], ["OBS Studio", "#302e31", "O", "obs"], ["Kdenlive", "#2e6db4", "K", "kdenlive"], ["Firefox ESR", "#e66000", "F", "firefox-esr"]];
   var S = null;
+  var UI = { qview: "home", dview: "main", picked: {}, file: null, mkEntry: true, batt: false };
+  var RULES = null;
+  function freshRules() {
+    return [
+      { kind: "app", id: "steam", name: "Steam", col: "#1b2838", ch: "S", batt: "继续用独显" },
+      { kind: "app", id: "blender", name: "Blender", col: "#e87d0d", ch: "B", batt: "暂停" },
+      { kind: "file", id: "/home/tester/Games/HollowKnight/hollow_knight.x86_64", name: "hollow_knight.x86_64", path: "~/Games/HollowKnight/", batt: "继续用独显" }
+    ];
+  }
+
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function tag(kind, text) { return '<span class="tag ' + kind + '">' + esc(text) + '</span>'; }
   function dgpuText(s) {
     if (s.active === "integrated") return ["独显已关闭", "var(--sleep)"];
-    return s.dgpu === "sleep" ? ["独显休眠中", "var(--sleep)"] : ["独显工作中", "var(--ok)"];
+    return s.dgpu === "sleep" ? ["独显休眠", "var(--sleep)"] : ["独显工作中", "var(--ok)"];
   }
   function pendingInfo(s) {
     if (s.configured === s.active) return null;
-    var m = MODE[s.configured];
     var how = (s.configured === "dedicated" && s.active !== "mux") ? "注销" : "重启";
-    return { mode: m, how: how };
+    return { mode: MODE[s.configured], how: how };
   }
-  function tag(kind, text) { return '<span class="tag ' + kind + '">' + esc(text) + '</span>'; }
   function costTag(m, s) {
     if (m.id === s.active) return tag("accent", "当前");
     if (m.id === s.configured) return tag("warn", "待生效");
-    var how = m.cost;
-    if (s.active === "mux" || m.id === "mux") how = "需重启";
-    return tag("", how);
+    return tag("", (s.active === "mux" || m.id === "mux") ? "需重启" : m.cost);
   }
-  function trayIcon(s, withBadge) {
-    var kind = s.active === "mux" ? "mux" : s.active;
-    var col = dgpuText(s)[1];
-    var badge = "";
-    if (pendingInfo(s)) col = "var(--warn)";
-    if (s.banner === "fail") col = "var(--bad)";
-    if (withBadge !== false) badge = '<span class="badge" style="background:' + col + '"></span>';
-    return GPU_SVG(kind) + badge;
-  }
-
-  function bannerHTML(s) {
+  function bannerHTML(s, where) {
     var p = pendingInfo(s);
-    if (p) return '<div class="banner warn"><div><b>' + p.how + '后改为“' + esc(p.mode.name) + '”</b>。' +
+    if (p) return '<div class="banner warn"><div><b>' + p.how + '后改为“' + esc(p.mode.name) + '”</b>。当前仍是“' + esc(MODE[s.active].name) + '”。' +
       (p.mode.id === "integrated" ? "重启后独显将断电，接在独显上的接口不能用。" : "") + '</div>' +
-      '<div class="acts"><button class="btn" type="button" data-act="undo">撤销</button><button class="btn" type="button">稍后</button><button class="btn primary" type="button">立即' + p.how + '</button></div></div>';
-    if (s.banner === "ext") return '<div class="banner warn"><div><b>有显示器接在独显的接口上</b>（HDMI-1：DELL U2723QE）。改为“集显”后这台显示器将不能用。</div></div>';
+      '<div class="acts"><button class="btn" type="button" data-act="undo">撤销</button>' + (where === "q" ? '<button class="btn" type="button">稍后</button>' : "") + '<button class="btn primary" type="button">立即' + p.how + '</button></div></div>';
+    if (s.banner === "ext") return '<div class="banner warn"><div><b>有显示器接在独显的接口上</b>（HDMI-1：DELL U2723QE）。改为“集显”后这台显示器将不能用，切换前会再确认一次。</div></div>';
     if (s.banner === "fail") return '<div class="banner bad"><div><b>上次开机时“独显优先”没有生效</b>，已自动回到“混合”。原因：图形服务未能使用 NVIDIA 显卡。</div><div class="acts"><button class="btn link" type="button">查看详情</button><button class="btn" type="button" data-act="dismiss">知道了</button></div></div>';
     if (s.banner === "flatpak") return '<div class="banner info"><div>Flatpak 应用需要与驱动 580.178.04 匹配的 NVIDIA 运行时才能用独显，目前未安装。</div><div class="acts"><button class="btn link" type="button">安装</button></div></div>';
     return "";
   }
+  function tileSub(s) {  // the two-cell tile leaves about 80 px for the subtitle (same as Wi-Fi): keep it to about 6 characters
+    var p = pendingInfo(s);
+    if (p) return [p.how + "后改" + p.mode.name, "var(--warn)"];
+    if (s.banner === "fail") return ["切换失败", "var(--bad)"];
+    var short = s.active === "integrated" ? "独显关" : (s.dgpu === "sleep" ? "休眠" : "工作中");
+    return [MODE[s.active].name + " · " + short, "var(--text2)"];
+  }
 
-  function renderPopup() {
-    var s = S, st = dgpuText(s);
+  function renderQuick() {
+    var s = S, sub = tileSub(s), kind = s.active;
+    document.getElementById("qhome").innerHTML =
+      '<div class="qgrid">' +
+      '<div class="qt two"><div class="main"><span class="c"><svg class="ico" viewBox="0 0 20 20"><path d="M2 8a12 12 0 0 1 16 0M5 11a8 8 0 0 1 10 0M8 14a3.5 3.5 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="16.5" r="1.2" fill="currentColor"/></svg></span><div style="min-width:0"><div class="n">无线网络</div><div class="s">agino-office</div></div></div><span class="go">›</span></div>' +
+      '<div class="qt two off"><div class="main"><span class="c"><svg class="ico" viewBox="0 0 20 20"><path d="m6 6 8 8-4 3V3l4 3-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div style="min-width:0"><div class="n">蓝牙</div><div class="s">已关闭</div></div></div><span class="go">›</span></div>' +
+      '<div class="qt two gpu" role="button" tabindex="0" data-q="sub" aria-label="显卡设置"><div class="main"><span class="c">' + GPU_SVG(kind) + '</span><div style="min-width:0"><div class="n">显卡</div><div class="s" style="color:' + sub[1] + '">' + esc(sub[0]) + '</div></div></div><span class="go">›</span></div>' +
+      '<div class="qt small"><span class="c">护</span>护眼模式</div><div class="qt small"><span class="c">飞</span>飞行模式</div>' +
+      '<div class="qslider"><span>亮度</span><i></i></div><div class="qslider"><span>音量</span><i></i></div>' +
+      '</div>';
     var visible = MODES.filter(function (m) { return s.active === "mux" ? (m.id === "mux" || m.id === "hybrid") : true; });
     var opts = visible.map(function (m) {
-      var checked = m.id === s.configured;
-      return '<div class="opt" role="radio" tabindex="0" aria-checked="' + checked + '" aria-disabled="false" data-mode="' + m.id + '">' +
+      return '<div class="opt" role="radio" tabindex="0" aria-checked="' + (m.id === s.configured) + '" data-mode="' + m.id + '">' +
         '<span class="radio"></span><div><div class="n">' + esc(m.name) + '</div><div class="d">' + esc(m.popd) + '</div></div>' + costTag(m, s) + '</div>';
     }).join("");
     var users = s.users.length ? s.users.map(function (u) {
       return '<div class="app"><span class="appico" style="background:' + u[1] + '">' + esc(u[2]) + '</span><div style="min-width:0"><div class="n">' + esc(u[0]) + '</div><div class="d">' + esc(u[3]) + '</div></div><span class="tag ok"><span class="dot"></span>独显</span></div>';
     }).join("") : '<div class="empty">' + (s.active === "mux" ? "独显直连模式下所有应用都用独显" : "没有应用在使用独显") + '</div>';
-    document.getElementById("popup").innerHTML =
-      '<div class="pophead"><span class="trayicon" style="width:36px;height:36px;background:var(--row-hover)">' + trayIcon(s) + '</span>' +
-      '<div><div class="t">显卡</div><div class="s">' + esc(MODE[s.active].name) + '模式 · <span style="color:' + st[1] + '">' + st[0] + '</span></div></div></div>' +
-      bannerHTML(s) +
+    var st = dgpuText(s);
+    document.getElementById("qsub").innerHTML =
+      '<div class="qsub"><div class="qhead"><button class="qback" type="button" data-q="home" aria-label="返回">‹</button><span class="t">显卡</span><span class="tag" style="color:' + st[1] + ';background:transparent"><span class="dot"></span>&nbsp;' + st[0] + '</span></div>' +
+      bannerHTML(s, "q") +
       '<div><div class="gtitle">模式</div><div class="group" role="radiogroup" aria-label="显卡模式">' + opts + '</div></div>' +
-      '<div><div class="gtitle">正在使用独显的应用</div><div class="group applist">' + users + '</div></div>' +
-      '<div class="popfoot"><span class="tag">NVIDIA GeForce RTX 5080 Laptop GPU</span><button class="btn link" type="button">显卡设置</button></div>';
-    document.getElementById("dockgpu").innerHTML = trayIcon(s);
-    document.getElementById("dockgpu").title = MODE[s.active].name + "模式 · " + st[0];
-  }
-
-  function renderQuick() {
-    var s = S, st = dgpuText(s), p = pendingInfo(s);
-    var sub = p ? (p.how + "后改为" + p.mode.name) : st[0];
-    document.getElementById("qpanel").innerHTML =
-      '<div class="qtile ghost">Wi-Fi</div><div class="qtile ghost">蓝牙</div>' +
-      '<div class="qtile wide" role="button" tabindex="0"><span class="qicon">' + GPU_SVG(s.active === "mux" ? "mux" : s.active) + '</span><div style="min-width:0"><div class="n">显卡 · ' + esc(MODE[s.active].name) + '</div><div style="color:' + (p ? "var(--warn)" : st[1]) + '">' + esc(sub) + '</div></div><span aria-hidden="true">›</span></div>' +
-      '<div class="qtile ghost">护眼模式</div><div class="qtile ghost">飞行模式</div><div class="qtile ghost">截图</div><div class="qtile ghost">勿扰</div>';
+      '<div><div class="gtitle">正在使用独显的应用</div><div class="group">' + users + '</div></div>' +
+      '<div class="qfoot"><span class="tag">NVIDIA GeForce RTX 5080 Laptop GPU</span><button class="btn link" type="button">显卡设置</button></div></div>';
+    document.getElementById("qhome").parentNode.style.opacity = UI.qview === "home" ? "1" : ".55";
+    document.getElementById("qsub").parentNode.style.opacity = UI.qview === "sub" ? "1" : ".55";
   }
 
   function renderDispSnip() {
@@ -416,44 +442,36 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
     var right = p ? tag("warn", p.how + "后改为" + p.mode.name) : '<span class="d">' + esc(MODE[s.active].name) + '</span>';
     document.getElementById("dispsnip").innerHTML =
       '<div style="font-size:15px;font-weight:600;padding:0 2px 4px">显示</div>' +
-      '<div class="card"><div class="crow"><div><div class="n">亮度</div></div><div class="select">80%</div></div>' +
-      '<div class="crow"><div><div class="n">缩放</div></div><div class="select">150% ▾</div></div>' +
-      '<div class="crow"><div><div class="n">护眼模式</div></div><span class="switch"></span></div></div>' +
-      '<div class="card"><div class="crow" style="cursor:pointer"><div><div class="n">显卡</div><div class="d">选择用集显还是独显，以及哪些应用用独显</div></div><div class="ctrls">' + right + '<span aria-hidden="true">›</span></div></div></div>';
+      '<div class="card"><div class="crow"><div class="n">亮度</div><div class="select">80%</div></div>' +
+      '<div class="crow"><div class="n">缩放</div><div class="select">150% ▾</div></div>' +
+      '<div class="crow"><div class="n">护眼模式</div><span class="switch"></span></div></div>' +
+      '<div class="card"><div class="crow link"><div><div class="n">显卡</div><div class="d">选择用集显还是独显，以及哪些应用用独显</div></div><div class="ctrls">' + right + '<span aria-hidden="true">›</span></div></div></div>';
   }
 
-  function renderDcc() {
-    var s = S, st = dgpuText(s), p = pendingInfo(s);
-    var mux = s.active === "mux";
+  function dccMain(s) {
+    var st = dgpuText(s), p = pendingInfo(s), mux = s.active === "mux";
     var gpus =
       (mux ? "" : '<div class="gpu"><span class="gpuico">' + GPU_SVG("integrated") + '</span><div style="min-width:0"><div class="n">Intel Arc Graphics</div><div class="kv"><span>集成显卡</span><span>驱动 i915</span><span>内置屏幕 eDP-1</span></div></div>' + tag("ok", "负责桌面") + '</div>') +
       '<div class="gpu"><span class="gpuico">' + GPU_SVG("dedicated") + '</span><div style="min-width:0"><div class="n">NVIDIA GeForce RTX 5080 Laptop GPU</div><div class="kv"><span>独立显卡</span><span>驱动 nvidia 580.178.04（开源内核模块）</span><span>' + (s.ext ? "HDMI-1：DELL U2723QE" : (mux ? "内置屏幕 eDP-1" : "未接显示器")) + '</span></div></div>' +
       '<span class="tag" style="color:' + st[1] + ';background:transparent"><span class="dot"></span>&nbsp;' + st[0] + '</span></div>';
     var modes = MODES.map(function (m) {
       var dis = mux && m.id !== "mux" && m.id !== "hybrid";
-      var now = m.id === s.active ? tag("accent", "当前") : (m.id === s.configured ? tag("warn", (pendingInfo(s) || {}).how + "后生效") : "");
+      var now = m.id === s.active ? tag("accent", "当前") : (m.id === s.configured ? tag("warn", (p || {}).how + "后生效") : "");
       return '<div class="mode" role="radio" tabindex="0" aria-checked="' + (m.id === s.configured) + '" aria-disabled="' + dis + '" data-mode="' + m.id + '">' +
-        '<span class="now">' + now + '</span><div class="top"><span class="radio" style="width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text2)"></span><span class="n">' + esc(m.name) + '</span></div>' +
+        '<span class="now">' + now + '</span><div class="top"><span class="radio"></span><span class="n">' + esc(m.name) + '</span></div>' +
         '<div class="d">' + esc(m.d) + '</div><div class="facts">' + m.facts.map(function (f) { return tag(f[0], f[1]); }).join("") + '</div></div>';
     }).join("");
-    var banner = "";
-    if (p) banner = '<div class="banner warn mock"><div><b>' + p.how + '后改为“' + esc(p.mode.name) + '”</b>。当前仍是“' + esc(MODE[s.active].name) + '”。</div><div class="acts"><button class="btn" type="button" data-act="undo">撤销</button><button class="btn primary" type="button">立即' + p.how + '</button></div></div>';
-    else if (s.banner === "fail") banner = '<div class="banner bad mock"><div><b>上次开机时“独显优先”没有生效</b>，已自动回到“混合”。原因：图形服务未能使用 NVIDIA 显卡（Xorg 日志第 412 行）。</div><div class="acts"><button class="btn" type="button">复制诊断信息</button><button class="btn" type="button" data-act="dismiss">知道了</button></div></div>';
-    else if (s.ext) banner = '<div class="banner warn mock"><div><b>HDMI-1 上的显示器接在独显上</b>。选择“集显”后这台显示器将不能用；如果确定要切换，会再确认一次。</div></div>';
     var rulesOff = s.active !== "hybrid";
-    var rules = [["Steam", "#1b2838", "S", "始终用独显", "电池供电时：继续用独显"], ["Blender", "#e87d0d", "B", "始终用独显", "电池供电时：暂停"], ["DaVinci Resolve", "#3a3f4b", "D", "始终用独显", "电池供电时：继续用独显"]];
-    var ruleRows = rules.map(function (r) {
-      return '<div class="crow"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="appico" style="background:' + r[1] + '">' + r[2] + '</span><div style="min-width:0"><div class="n">' + esc(r[0]) + '</div><div class="d">' + esc(r[3]) + '</div></div></div><div class="ctrls"><span class="select">' + esc(r[4]) + ' ▾</span><button class="btn" type="button" aria-label="删除规则">删除</button></div></div>';
+    var ruleRows = RULES.map(function (r, i) {
+      var ico = r.kind === "file" ? '<span class="appico file">▸</span>' : '<span class="appico" style="background:' + r.col + '">' + esc(r.ch) + '</span>';
+      var d = r.kind === "file" ? '<span class="tag">文件</span> ' + esc(r.path) : "始终用独显";
+      return '<div class="crow"><div class="lead">' + ico + '<div><div class="n">' + esc(r.name) + '</div><div class="d">' + d + '</div></div></div><div class="ctrls"><span class="select">电池供电时：' + esc(r.batt) + ' ▾</span><button class="btn" type="button" data-del="' + i + '">删除</button></div></div>';
     }).join("");
-    document.getElementById("dcc").innerHTML =
-      '<aside class="dside"><div class="search">搜索</div>' +
-      ['账户', '设备', '显示', '个性化', '网络', '声音', '电源', '系统'].map(function (n, i) { return '<div class="nav' + (n === "显示" ? " sel" : "") + '"><span class="ni">' + n[0] + '</span>' + n + '</div>'; }).join("") + '</aside>' +
-      '<div class="dmain"><div class="titlebar"><span class="crumb">显示 › <b>显卡</b></span><span class="wc" aria-hidden="true"><span>—</span><span>□</span><span>×</span></span></div>' +
-      '<div class="dcontent">' + banner +
+    return '<div class="dcontent">' + bannerHTML(s, "d") +
       '<div class="dgroup"><div class="h">显卡</div><div class="card">' + gpus + '</div></div>' +
       '<div class="dgroup"><div class="h">显卡模式<span class="sub">' + (mux ? "独显直连中，其他模式需先改回“混合”并重启" : "选择后需要管理员授权") + '</span></div><div class="modes" role="radiogroup" aria-label="显卡模式">' + modes + '</div></div>' +
       '<div class="dgroup" style="' + (rulesOff ? "opacity:.5" : "") + '"><div class="h">按应用使用独显<span class="sub">' + (rulesOff ? "只在“混合”模式下起作用，当前模式下所有应用都用" + (s.active === "integrated" ? "集显" : "独显") : "其他应用用集显；也可以在启动器、任务栏右键选“使用独立显卡运行”") + '</span></div>' +
-      '<div class="card">' + ruleRows + '<div class="crow"><div class="d">推荐：Steam、Blender、DaVinci Resolve、Godot、OBS Studio（默认不启用）</div><button class="btn primary" type="button">添加应用</button></div></div></div>' +
+      '<div class="card">' + ruleRows + '<div class="crow link" role="button" tabindex="0" data-d="add"><div><div class="n" style="color:var(--accent)">添加应用</div><div class="d">从系统里的应用中选择，或浏览文件指定程序</div></div><span aria-hidden="true">›</span></div></div></div>' +
       '<div class="dgroup"><div class="h">应用兼容<span class="sub">只列出检测到的情况</span></div><div class="card">' +
       '<div class="crow"><div><div class="n">Flatpak 应用的 NVIDIA 运行时</div><div class="d">需要 org.freedesktop.Platform.GL.nvidia-580-178-04，与当前驱动匹配；没有时 Flatpak 应用只能用集显或软件渲染。</div></div><div class="ctrls">' + tag("warn", "未安装") + '<button class="btn" type="button">安装</button></div></div>' +
       '<div class="crow"><div><div class="n">Steam 32 位显卡库</div><div class="d">32 位游戏和 Steam 本身需要 i386 版的 NVIDIA 用户态库。</div></div><div class="ctrls">' + tag("ok", "已安装") + '</div></div>' +
@@ -461,58 +479,86 @@ button:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); out
       '<div class="dgroup"><div class="h">高级</div><div class="card">' +
       '<div class="crow"><div><div class="n">独显空闲时休眠</div><div class="d">' + (mux ? "独显直连模式下独显一直工作。" : "独显没有程序使用时自动断电。最近 10 分钟休眠 92% 的时间。") + '</div></div><div class="ctrls">' + (mux ? tag("", "不适用") : tag("ok", "工作正常")) + '</div></div>' +
       '<div class="crow"><div><div class="n">命令行</div><div class="d"><code>agino-gpu-run 命令</code> 用独显运行任意程序</div></div><button class="btn" type="button">复制</button></div></div></div>' +
-      '</div></div>';
+      '</div>';
   }
 
-  function renderDialog() {
-    var apps = [["Steam", "#1b2838", "S", true], ["Blender", "#e87d0d", "B", true], ["Godot Engine", "#478cbf", "G", false], ["OBS Studio", "#302e31", "O", false], ["Kdenlive", "#2e6db4", "K", false]];
-    document.getElementById("dialog").innerHTML =
-      '<div style="font-size:15px;font-weight:600">添加用独显运行的应用</div><div class="search">搜索应用</div>' +
-      '<div class="group applist">' + apps.map(function (a) {
-        return '<div class="app"><span class="appico" style="background:' + a[1] + '">' + a[2] + '</span><div class="n">' + esc(a[0]) + (a[3] ? ' <span class="tag">已添加</span>' : "") + '</div><span class="chk' + (a[0] === "Godot Engine" ? " on" : "") + '"></span></div>';
-      }).join("") + '</div>' +
-      '<div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><span class="chk"></span>电池供电时暂停这些规则</div>' +
-      '<div class="acts"><button class="btn" type="button">取消</button><button class="btn primary" type="button">添加</button></div>';
-  }
-
-  function renderLegend() {
-    var items = [
-      [{ active: "hybrid", configured: "hybrid", dgpu: "sleep" }, "混合<br>独显休眠"],
-      [{ active: "hybrid", configured: "hybrid", dgpu: "active" }, "混合<br>独显工作中"],
-      [{ active: "integrated", configured: "integrated", dgpu: "off" }, "集显"],
-      [{ active: "dedicated", configured: "dedicated", dgpu: "active" }, "独显优先"],
-      [{ active: "mux", configured: "mux", dgpu: "active" }, "独显直连"],
-      [{ active: "hybrid", configured: "integrated", dgpu: "sleep" }, "待重启/注销<br>（黄点）"],
-      [{ active: "hybrid", configured: "hybrid", dgpu: "sleep", banner: "fail" }, "上次切换失败<br>（红点）"]
-    ];
-    document.getElementById("legend").innerHTML = items.map(function (it) {
-      return '<div><span class="trayicon mock">' + trayIcon(it[0]) + '</span>' + it[1] + '</div>';
+  function dccAdd() {
+    var added = {}; RULES.forEach(function (r) { if (r.kind === "app") added[r.id] = true; });
+    var rows = INSTALLED.map(function (a) {
+      var isAdded = !!added[a[3]], on = isAdded || !!UI.picked[a[3]];
+      return '<div class="crow"><div class="lead"><span class="appico" style="background:' + a[1] + '">' + a[2] + '</span><div><div class="n">' + esc(a[0]) + (isAdded ? ' ' + tag("", "已添加") : "") + '</div></div></div>' +
+        '<span class="chk' + (on ? " on" : "") + (isAdded ? " dis" : "") + '" role="checkbox" aria-checked="' + on + '" tabindex="0" data-pick="' + (isAdded ? "" : a[3]) + '"></span></div>';
     }).join("");
+    var fileRow = UI.file
+      ? '<div class="crow"><div class="lead"><span class="appico file">▸</span><div><div class="n">' + esc(UI.file.name) + '</div><div class="d">' + esc(UI.file.path) + '</div></div></div><button class="btn" type="button" data-d="unfile">移除</button></div>' +
+        '<div class="crow"><div><div class="n">在启动器里创建入口</div><div class="d">名称“' + esc(UI.file.label) + '”，从这个入口启动时用独显。也可以在设置好之后从启动器拖到桌面或任务栏。</div></div><button class="switch' + (UI.mkEntry ? " on" : "") + '" type="button" data-d="mkentry" aria-label="在启动器里创建入口"></button></div>'
+      : "";
+    var count = Object.keys(UI.picked).filter(function (k) { return UI.picked[k]; }).length + (UI.file ? 1 : 0);
+    return '<div class="dcontent">' +
+      '<div class="dgroup"><div class="h">系统里的应用<span class="sub">来自应用管理器，可多选</span></div><div class="searchbox">搜索应用</div><div class="card">' + rows + '</div></div>' +
+      '<div class="dgroup"><div class="h">从文件添加<span class="sub">没有安装进系统的程序，例如解压即用的游戏、AppImage</span></div><div class="card">' +
+      '<div class="crow"><div><div class="n">选择程序文件</div><div class="d">可执行文件、AppImage、脚本或 .desktop 文件。从启动器、任务栏或指向这个文件的桌面入口启动时生效；在文件管理器里双击或在终端直接运行时不生效（终端里用 agino-gpu-run）。</div></div><button class="btn" type="button" data-d="browse">浏览…</button></div>' +
+      fileRow + '</div></div>' +
+      '<div class="dgroup"><div class="h">选项</div><div class="card"><div class="crow"><div><div class="n">电池供电时暂停这些规则</div><div class="d">拔掉电源后这些应用改用集显，接上电源后恢复。</div></div><button class="switch' + (UI.batt ? " on" : "") + '" type="button" data-d="batt" aria-label="电池供电时暂停"></button></div></div></div>' +
+      '</div>' +
+      '<div class="dfoot"><button class="btn" type="button" data-d="main">取消</button><button class="btn primary" type="button" data-d="commit"' + (count ? "" : ' disabled style="opacity:.5"') + '>添加' + (count ? "（" + count + "）" : "") + '</button></div>';
   }
 
-  function render() { renderPopup(); renderQuick(); renderDispSnip(); renderDcc(); }
+  function renderDcc() {
+    var s = S, inAdd = UI.dview === "add";
+    var crumb = inAdd ? '<span class="crumb">显示 › <a data-d="main">显卡</a> › <b>添加应用</b></span>' : '<span class="crumb">显示 › <b>显卡</b></span>';
+    document.getElementById("dcc").innerHTML =
+      '<aside class="dside"><div class="search">搜索</div>' +
+      ['账户', '设备', '显示', '个性化', '网络', '声音', '电源', '系统'].map(function (n) { return '<div class="nav' + (n === "显示" ? " sel" : "") + '"><span class="ni">' + n[0] + '</span>' + n + '</div>'; }).join("") + '</aside>' +
+      '<div class="dmain"><div class="titlebar">' + crumb + '<span class="wc" aria-hidden="true"><span>—</span><span>□</span><span>×</span></span></div>' +
+      (inAdd ? dccAdd() : dccMain(s) + '<div></div>') + '</div>';
+  }
+
+  function render() { renderQuick(); renderDispSnip(); renderDcc(); }
   function setScen(key) {
-    var base = SCEN[key];
-    S = JSON.parse(JSON.stringify(base));
+    S = JSON.parse(JSON.stringify(SCEN[key]));
     document.querySelectorAll(".scen button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.scen === key)); });
     render();
   }
   function pick(id) {
-    var el = document.querySelector('[data-mode="' + id + '"]');
-    if (el && el.getAttribute("aria-disabled") === "true") return;
+    var el = document.querySelector('[data-mode="' + id + '"][aria-disabled="true"]');
+    if (el) return;
     S.configured = id;
     if (S.banner === "fail") S.banner = null;
     render();
   }
+  function dAction(a) {
+    if (a === "add") { UI.dview = "add"; UI.picked = {}; UI.file = null; UI.mkEntry = true; UI.batt = false; }
+    else if (a === "main") UI.dview = "main";
+    else if (a === "browse") UI.file = { name: "game.x86_64", path: "/home/tester/Games/Hades/game.x86_64", label: "game" };
+    else if (a === "unfile") UI.file = null;
+    else if (a === "mkentry") UI.mkEntry = !UI.mkEntry;
+    else if (a === "batt") UI.batt = !UI.batt;
+    else if (a === "commit") {
+      var b = UI.batt ? "暂停" : "继续用独显";
+      INSTALLED.forEach(function (x) { if (UI.picked[x[3]]) RULES.push({ kind: "app", id: x[3], name: x[0], col: x[1], ch: x[2], batt: b }); });
+      if (UI.file) RULES.push({ kind: "file", id: UI.file.path, name: UI.file.name, path: "~/Games/Hades/", batt: b });
+      UI.dview = "main";
+    }
+    renderDcc();
+  }
   document.addEventListener("click", function (e) {
-    var sb = e.target.closest(".scen button"); if (sb) { setScen(sb.dataset.scen); return; }
-    var act = e.target.closest("[data-act]");
+    var t = e.target;
+    var sb = t.closest(".scen button"); if (sb) { setScen(sb.dataset.scen); return; }
+    var q = t.closest("[data-q]"); if (q) { UI.qview = q.dataset.q; renderQuick(); return; }
+    var act = t.closest("[data-act]");
     if (act) { if (act.dataset.act === "undo") S.configured = S.active; if (act.dataset.act === "dismiss") S.banner = null; render(); return; }
-    var m = e.target.closest("[data-mode]"); if (m) pick(m.dataset.mode);
+    var d = t.closest("[data-d]"); if (d && !d.disabled) { dAction(d.dataset.d); return; }
+    var pk = t.closest("[data-pick]"); if (pk && pk.dataset.pick) { UI.picked[pk.dataset.pick] = !UI.picked[pk.dataset.pick]; renderDcc(); return; }
+    var del = t.closest("[data-del]"); if (del) { RULES.splice(Number(del.dataset.del), 1); renderDcc(); return; }
+    var m = t.closest("[data-mode]"); if (m) pick(m.dataset.mode);
   });
   document.addEventListener("keydown", function (e) {
-    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-mode]")) { e.preventDefault(); pick(e.target.dataset.mode); }
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var t = e.target; if (!t.matches) return;
+    if (t.matches("[data-mode], [data-q], [data-d], [data-pick]")) { e.preventDefault(); t.click(); }
   });
-  renderLegend(); renderDialog(); setScen("idle");
+  RULES = freshRules();
+  setScen("idle");
 })();
 </script>
