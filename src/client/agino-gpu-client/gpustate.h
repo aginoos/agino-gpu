@@ -64,6 +64,7 @@ Q_SIGNALS:
 private:
     void init();
     void rewatch();
+    void reloadFiles(bool forceSignal);
     void poll();
 
     Root m_root;

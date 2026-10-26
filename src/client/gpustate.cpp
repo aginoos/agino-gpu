@@ -96,6 +96,11 @@ void GpuState::setPolling(bool enabled)
 
 void GpuState::reload()
 {
+    reloadFiles(false);
+}
+
+void GpuState::reloadFiles(bool forceSignal)
+{
     const Mode configured = readConfiguredMode(m_root);
     const std::optional<BootState> boot = readBootState(m_root);
     const Mode active = boot ? boot->active : Mode::Hybrid;
@@ -115,15 +120,14 @@ void GpuState::reload()
     m_failedMode = failedMode;
     m_offloadEnv = env;
     rewatch();
-    if (!same)
+    if (!same || forceSignal)
         Q_EMIT changed();
 }
 
 void GpuState::redetect()
 {
     m_hw = detectHardware(m_root);
-    reload();
-    Q_EMIT changed();
+    reloadFiles(true);
 }
 
 void GpuState::rewatch()

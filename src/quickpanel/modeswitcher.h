@@ -38,7 +38,7 @@ Q_SIGNALS:
 
 private:
     void request(Mode mode, bool force);
-    void finish(const SetModeResult &result, Mode mode);
+    void finish(const SetModeResult &result, Mode mode, quint64 generation);
     void setNotice(const QString &text, bool needsConfirm, Mode mode);
 
     GpuState *m_state;
@@ -46,6 +46,9 @@ private:
     bool m_busy = false;
     Notice m_notice;
     Mode m_target = Mode::Hybrid;
+    // Bumped by clearNotice() (also when the panel hides): a reply that arrives for an older
+    // generation updates the state but sets no notice, so no stale confirm banner reappears.
+    quint64 m_generation = 0;
 };
 
 } // namespace AginoGpu

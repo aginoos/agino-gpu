@@ -19,7 +19,12 @@ void ModeSwitcher::select(Mode mode)
         return;
     clearNotice();
     m_busy = true;
-    m_control->checkMode(mode, [this, mode](const QList<CheckItem> &items) {
+    const quint64 generation = m_generation;
+    m_control->checkMode(mode, [this, mode, generation](const QList<CheckItem> &items) {
+        if (generation != m_generation) {
+            m_busy = false; // the user left; do not switch behind their back
+            return;
+        }
         QStringList errors;
         QStringList warnings;
         const Gpu *gpu = m_state->discreteGpu();
@@ -59,6 +64,7 @@ void ModeSwitcher::undo()
 
 void ModeSwitcher::clearNotice()
 {
+    ++m_generation;
     if (m_notice.isEmpty())
         return;
     m_notice = Notice();
@@ -68,13 +74,20 @@ void ModeSwitcher::clearNotice()
 void ModeSwitcher::request(Mode mode, bool force)
 {
     m_busy = true;
-    m_control->setMode(mode, force, [this, mode](const SetModeResult &result) { finish(result, mode); });
+    const quint64 generation = m_generation;
+    m_control->setMode(mode, force, [this, mode, generation](const SetModeResult &result) {
+        finish(result, mode, generation);
+    });
 }
 
-void ModeSwitcher::finish(const SetModeResult &result, Mode mode)
+void ModeSwitcher::finish(const SetModeResult &result, Mode mode, quint64 generation)
 {
     m_busy = false;
     using Status = SetModeResult::Status;
+    if (generation != m_generation && result.status != Status::Ok && result.status != Status::NotAuthorized) {
+        Q_EMIT changed();
+        return;
+    }
     switch (result.status) {
     case Status::Ok:
     case Status::NotAuthorized:
