@@ -52,7 +52,8 @@ private Q_SLOTS:
     void onlyUidFilter()
     {
         const Root root = fixtureRoot();
-        const Gpu &dgpu = *detectHardware(root).discreteGpu();
+        const Hardware hw = detectHardware(root);
+        const Gpu &dgpu = *hw.discreteGpu();
         QCOMPARE(pids(findGpuUsers(root, dgpu, quint32(1000))), (QList<quint32>{101, 102, 106}));
         QCOMPARE(pids(findGpuUsers(root, dgpu, quint32(0))), QList<quint32>{103});
         QVERIFY(findGpuUsers(root, dgpu, quint32(4242)).isEmpty());
