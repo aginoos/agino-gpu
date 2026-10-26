@@ -25,6 +25,7 @@ add_subdirectory(src/run)
 if(AGINO_GPU_BUILD_PLUGINS)
     add_subdirectory(src/client)
     add_subdirectory(src/quickpanel)
+    add_subdirectory(src/dcc)
 endif()
 add_subdirectory(data)
 
