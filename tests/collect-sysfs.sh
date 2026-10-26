@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copies the sysfs attributes agino-gpu reads into a fixture tree, keeping the real relative
-# symlinks (bus/pci/devices, class/drm, driver, device). Read-only: no config space reads, no
-# DRM connector "status" reads of a runtime-suspended device (those can wake the GPU).
+# symlinks (bus/pci/devices, class/drm, driver, device). Read-only and does not wake a
+# suspended GPU: no config space reads; connector "status" is a cached value (V-12).
 # Usage: collect-sysfs.sh OUTDIR   (then: tar -C OUTDIR -czf fixture.tar.gz .)
 set -eu
 out=$1
@@ -17,11 +17,6 @@ copy_link() { # $1 = absolute symlink path; recreate with the same relative targ
     [ -L "$1" ] || return 0
     mkdir -p "$out$(dirname "$1")"
     ln -s "$(readlink "$1")" "$out$1"
-}
-device_active() { # $1 = PCI device dir; "active" or no runtime PM -> 0
-    local s
-    s=$(cat "$1/power/runtime_status" 2>/dev/null || echo active)
-    [ "$s" = active ] || [ "$s" = unsupported ]
 }
 
 pci_dev() { # $1 = /sys/bus/pci/devices/<addr>
@@ -58,9 +53,7 @@ for e in /sys/class/drm/*; do
     mkdir -p "$out$real"
     copy_link "$real/device"
     if [ -e "$real/enabled" ]; then # connector
-        copy_attr "$real/enabled"; copy_attr "$real/dpms"
-        dev=$(readlink -f "$real/device"); [ -d "$dev/power" ] || dev=$(readlink -f "$real/../device")
-        if device_active "$dev"; then copy_attr "$real/status"; fi
+        copy_attr "$real/enabled"; copy_attr "$real/dpms"; copy_attr "$real/status"
     fi
 done
 
