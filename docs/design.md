@@ -201,6 +201,35 @@ P4 只做内置识别，不做通用的 profiles/*.json 配置机制；不改应
 | 一般 Vulkan 程序 | 同上 | 同上 |
 | CUDA / OpenCL / AI 推理 | 不经过显示栈，不需要按需渲染变量；但会唤醒独显 | 不处理；文档说明 `integrated` 模式下不可用 |
 
+#### 5.4.1 Chromium 在 X11 按需渲染下失败的根因（2026-10-26 调查）
+
+环境：105（Intel Arrow Lake 集显驱动屏幕 + RTX 5080 Laptop，驱动 580.178.04，`modesetting` + `NVIDIA-G0` 两个 provider），Debian Chromium 156.0.8078.47（ANGLE `3b89d84e`），deepin kwin X11 合成器开启。带 5.1 的变量启动。
+
+因果链（源码行号对应 Chromium tag 156.0.8078.47 与其 DEPS 固定的 ANGLE 版本）：
+
+1. Chromium 的 GPU 进程初始化 ANGLE 时总带上 `EGL_X11_VISUAL_ID_ANGLE`（`ui/base/x/x11_gl_egl_utility.cc:43-58`）。visual 由 `VisualManager::ChooseVisualForWindow(want_argb=true)` 选：有合成器（`_NET_WM_CM_S0` 有主人）就用 32 位 ARGB visual（`ui/gfx/x/visual_manager.cc:85-98`）。候选列表来自 X 协议请求 `glx().GetVisualConfigs`（`ui/gfx/x/visual_picker_glx.cc:195-203`），由 X 服务器（Intel 一侧）回答，不经过 libGL。105 上选中的是 0x6b9（depth 32）。
+2. ANGLE 的 GLX 后端用 libGL（按需渲染时 glvnd 选 NVIDIA）的 `glXChooseFBConfig` 列出全部 fbconfig，找 `GLX_VISUAL_ID` 恰好等于请求值的那个，找不到就返回 `EGL_NOT_INITIALIZED`「Invalid visual ID requested」，没有退路（`src/libANGLE/renderer/gl/glx/DisplayGLX.cpp:166-190`）。
+3. NVIDIA 在按需渲染下只给 12 个 visual（0x21、0x22、0x57a–0x57e、0x619–0x61d），全是 depth 24，没有任何 32 位；同一屏幕上 Mesa 给 336 个（`glxinfo -v` 对照，X 服务器共 337 个 visual）。0x6b9 不在其中 → GPU 进程初始化失败 → 全部软件渲染。
+
+因果验证：暂停 kwin 合成后，Chromium 窗口改用 0x21（depth 24），同样的变量和默认 `--use-angle=gl` 即得到 `ANGLE (NVIDIA …, OpenGL 4.5.0 NVIDIA 580.178.04)`，各项加速 enabled；恢复合成后又失败。
+
+各后端在合成器开启时的结果（数据来自 Chromium 自己的 `SystemInfo.getInfo`，经 DevTools 协议读取，`tests/manual/chromium-gpu-probe`）：
+
+| 配置 | 渲染器 | gpu_compositing | webgl | vulkan |
+|---|---|---|---|---|
+| 不带变量（集显基线） | Intel Mesa | enabled | enabled | disabled_off |
+| 变量 + `--use-angle=gl`（默认） | 无（初始化失败） | disabled_software | disabled_off | disabled_off |
+| 变量 + `--use-angle=gl-egl` | NVIDIA OpenGL ES 3.2 | **disabled_software** | enabled_readback | disabled_off |
+| 变量 + `--use-angle=vulkan` + 三个 feature | NVIDIA Vulkan 1.4.312 | enabled | enabled | enabled_on |
+| 同上，但后面再跟一个 `--enable-features=WebRTCPipeWireCapturer` | NVIDIA Vulkan | **disabled_software** | enabled_readback | **disabled_off** |
+
+结论：
+
+- 根治在上游，我们单方面做不了：Chromium 应在 ARGB visual 不被 libGL 的 fbconfig 支持时退回不透明 visual，或 ANGLE 按深度/类别退而求其次；NVIDIA 可在按需渲染下提供 32 位 visual。报告草稿见 `docs/upstream-reports.md`，由用户提交（用户决定 2026-10-26）。给 Debian chromium 打补丁要分叉并构建整个 Chromium，且不覆盖 Chrome/Electron，不做。
+- 过渡方案只能是 ANGLE Vulkan：gl-egl 能用 NVIDIA 但合成退回软件。
+- 开关语义：`base::CommandLine` 对重复开关取最后一个（`base/command_line.cc:436-455`），`FeatureList` 只读一个 `--enable-features` 和一个 `--disable-features`，disable 优先（`base/feature_list.cc:420-460`）；Electron 相同。所以 feature 必须并入应用自己的 `--enable-features`（最后一个），不能另加一个；用户 `--disable-features` 里禁用了这三个 feature 之一、或已给 `--use-angle=` 时不改。
+- 上游现状：没有修复，也没有维护者给出根因；NVIDIA 论坛自 2020 年起（Chrome 86–139、驱动 435–535）有同样报错的用户报告，GNOME/KDE 的 switcheroo-control 只设变量，X11 上同样失败。`DefaultANGLEVulkan` 在 156 默认关闭，Google 只以实验方式对部分用户开启。
+
 ## 6. 系统集成
 
 ### 6.1 服务
