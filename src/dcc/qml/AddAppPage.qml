@@ -47,7 +47,7 @@ DccObject {
             canSearch: false
             pageType: DccObject.Item
             page: D.SearchEdit {
-                placeholderText: qsTr("Search")
+                placeholder: qsTr("Search")
                 text: root.model.filter
                 onTextChanged: root.model.filter = text
             }

@@ -138,7 +138,7 @@ DccObject {
         AddAppPage {
             name: "addApp"
             parentName: "gpu/rulesGroup"
-            displayName: qsTr("Add")
+            displayName: qsTr("Add apps")
             weight: 9000
             enabled: dccData.rulesEnabled
         }

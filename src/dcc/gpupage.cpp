@@ -104,7 +104,7 @@ QVariantList GpuPage::gpus() const
         parts.removeAll(QString());
         const DgpuStatus status = discrete ? m_state->dgpuStatus() : DgpuStatus::None;
         list.append(QVariantMap{{QStringLiteral("name"), gpuName(gpu)},
-                                {QStringLiteral("line"), parts.join(QLatin1String(" · "))},
+                                {QStringLiteral("line"), parts.join(QStringLiteral(" · "))},
                                 {QStringLiteral("status"), Texts::dgpuStatus(status)},
                                 {QStringLiteral("statusKind"), statusKind(status)}});
     }

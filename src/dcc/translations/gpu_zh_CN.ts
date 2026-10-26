@@ -31,8 +31,8 @@
         <translation>文件不存在</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>添加</translation>
+        <source>Add apps</source>
+        <translation>添加应用</translation>
     </message>
     <message>
         <source>Pause on battery</source>

@@ -31,8 +31,8 @@
         <translation>File not found</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>Add</translation>
+        <source>Add apps</source>
+        <translation>Add apps</translation>
     </message>
     <message>
         <source>Pause on battery</source>
