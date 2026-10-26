@@ -164,21 +164,19 @@ QList<CheckResult> checkMode(const Hardware &hw, Mode current, Mode target, cons
         && !dgpu->connectedOutputs.isEmpty())
         return {makeResult(Level::Error, "desktop-display-on-dgpu",
                            "A display is connected to the discrete GPU; integrated mode would leave it dark.")};
+    if (toIntegrated && dgpu && hw.hasInternalPanel && hw.internalPanelGpu == dgpu->pciAddress)
+        return {makeResult(Level::Error, "panel-on-dgpu",
+                           "The built-in display is connected to the discrete GPU only; "
+                           "switch the MUX back to hybrid first.")};
     if (!contains(supportedModes(hw), target))
         return {makeResult(Level::Error, "unsupported-mode",
                            "This mode is not available on this computer.")};
 
     QList<CheckResult> results;
     if (toIntegrated && dgpu) {
-        const bool panelOnDgpu = hw.hasInternalPanel && hw.internalPanelGpu == dgpu->pciAddress;
-        if (panelOnDgpu) {
-            results.append(makeResult(Level::Error, "panel-on-dgpu",
-                                      "The built-in display is connected to the discrete GPU only; "
-                                      "switch the MUX back to hybrid first."));
-        } else if (!dgpu->connectedOutputs.isEmpty()) {
+        if (!dgpu->connectedOutputs.isEmpty())
             results.append(makeResult(Level::Warning, "external-display-on-dgpu",
                                       "Displays connected to the discrete GPU will stop working."));
-        }
     }
     if (toDedicated) {
         if (ctx.secureBootEnabled && !ctx.nvidiaModuleSigned && dgpu && dgpu->vendor == Vendor::Nvidia)

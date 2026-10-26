@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "agino-gpu/detect.h"
 
+#include <QProcess>
 #include <QtTest>
 
 using namespace AginoGpu;
