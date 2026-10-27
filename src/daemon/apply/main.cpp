@@ -20,8 +20,6 @@ using namespace AginoGpu;
 
 namespace {
 
-constexpr char kSystemdModulesLoad[] = "/usr/lib/systemd/systemd-modules-load";
-
 void say(const QString &line)
 {
     std::fprintf(stdout, "agino-gpu-apply: %s\n", qPrintable(line));
@@ -30,16 +28,16 @@ void say(const QString &line)
 
 // Run the modules-load.d entries again. udev loads only the driver a device asks for (nvidia);
 // the ones listed there (nvidia_drm) failed earlier in this boot while the discrete GPU was off,
-// removed or blocked.
+// removed or blocked. A restart of the unit (not the bare binary) also clears its failed state.
 void loadConfiguredModules(const Root &root)
 {
     if (!root.prefix().isEmpty())
         return;
-    QProcess modulesLoad;
-    modulesLoad.start(QString::fromLatin1(kSystemdModulesLoad), QStringList());
-    if (!modulesLoad.waitForFinished(15000) || modulesLoad.exitStatus() != QProcess::NormalExit
-        || modulesLoad.exitCode() != 0)
-        say(QStringLiteral("%1 failed").arg(QString::fromLatin1(kSystemdModulesLoad)));
+    QProcess systemctl;
+    systemctl.start(QStringLiteral("systemctl"), {QStringLiteral("restart"), QStringLiteral("systemd-modules-load.service")});
+    if (!systemctl.waitForFinished(15000) || systemctl.exitStatus() != QProcess::NormalExit
+        || systemctl.exitCode() != 0)
+        say(QStringLiteral("restarting systemd-modules-load.service failed"));
     else
         say(QStringLiteral("modules-load.d modules loaded"));
 }
