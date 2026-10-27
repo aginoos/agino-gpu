@@ -264,8 +264,8 @@ Chromium 升级后按同样方法重跑（`tests/manual/`，均需在用户的 X
 | 方法 | 授权（polkit action） | 说明 |
 |---|---|---|
 | `CheckMode(s mode) → a(ss)` | 无 | 返回检查结果（级别、文字），不改任何东西 |
-| `SetMode(s mode, a{sv} options)` | `org.agino.gpu.set-mode`：活动本地会话的管理员 `auth_admin_keep` | `options.force`(b) 用于确认警告 |
-| `GetDgpuUsers() → a(uus)` | 无 | 打开了独显设备节点的进程（pid、uid、名字）；只返回调用者自己的进程，管理员授权后返回全部 |
+| `SetMode(s mode, a{sv} options)` | `org.agino.gpu.set-mode`：本地活动会话里 sudo 组的用户直接放行（`50-agino-gpu.rules`），其他情况 `auth_admin_keep` | `options.force`(b) 用于确认警告 |
+| `GetDgpuUsers() → a(uus)` | 无 | 打开了独显设备节点的进程（pid、uid、名字）；只返回调用者自己的进程；`org.agino.gpu.list-all-users` 已授权（同一规则：本地活动会话的 sudo 组用户）时返回全部，不弹认证 |
 
 客户端库（`src/client`，P2）的状态不经过 daemon：`GpuState` 自己检测硬件、监视 `/etc/agino-gpu`、`/run/agino-gpu`、`/var/lib/agino-gpu` 三个目录（文件按改名方式替换，所以监视目录），独显运行状态只在界面可见时每 2 秒读一次；只有 `CheckMode`/`SetMode`/`GetDgpuUsers` 走 D-Bus（会按需激活 daemon）。daemon 不可用时界面照常显示状态，切换报错。
 

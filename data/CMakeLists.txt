@@ -23,6 +23,7 @@ install(FILES org.agino.Gpu1.conf DESTINATION "${CMAKE_INSTALL_DATADIR}/dbus-1/s
 
 # polkit
 install(FILES org.agino.gpu.policy DESTINATION "${CMAKE_INSTALL_DATADIR}/polkit-1/actions")
+install(FILES 50-agino-gpu.rules DESTINATION "${CMAKE_INSTALL_DATADIR}/polkit-1/rules.d")
 
 # systemd
 install(FILES "${GEN}/agino-gpud.service" "${GEN}/agino-gpu-apply.service"
