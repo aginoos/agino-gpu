@@ -26,7 +26,8 @@ void usage(FILE *out)
 {
     std::fputs("Usage: agino-gpu-run [--chromium] [--] COMMAND [ARGS...]\n"
                "Run COMMAND on the discrete GPU (PRIME render offload).\n"
-               "When no discrete GPU is available, COMMAND runs unchanged.\n"
+               "When no discrete GPU is available, COMMAND runs unchanged. Variables already set\n"
+               "in the environment are kept.\n"
                "Chromium and Electron programs (detected by their runtime files, also inside an\n"
                "AppImage) get the ANGLE-on-Vulkan switches they need to render on an NVIDIA GPU.\n"
                "  --chromium  treat COMMAND as Chromium-based without detection (for wrapper scripts)\n",
@@ -124,7 +125,9 @@ int main(int argc, char **argv)
                 continue;
             const QByteArray key = entry.left(eq).toLocal8Bit();
             const QByteArray value = entry.mid(eq + 1).toLocal8Bit();
-            setenv(key.constData(), value.constData(), 1);
+            // a variable already set wins (as in the DAM patch): it may be the user's own choice, and under
+            // DAM this only fills in what an Exec line's env -i cleared
+            setenv(key.constData(), value.constData(), 0);
         }
     }
 
@@ -133,7 +136,8 @@ int main(int argc, char **argv)
     for (int i = first + 1; i < argc; ++i)
         args << QString::fromLocal8Bit(argv[i]);
     QStringList extended = args;
-    if (environment.contains(QStringLiteral("__NV_PRIME_RENDER_OFFLOAD=1"))) {
+    const char *offload = std::getenv("__NV_PRIME_RENDER_OFFLOAD");
+    if (!environment.isEmpty() && offload && std::strcmp(offload, "1") == 0) {
         const QString program = forceChromium ? QString() : canonicalProgram(argv[first]);
         if (forceChromium || (!program.isEmpty() && isChromiumProgram(program, args)))
             extended = AginoGpu::withChromiumOffloadArguments(args);
