@@ -60,7 +60,8 @@ void bringBackDiscreteGpu(const Root &root)
         say(QStringLiteral("dgpu_disable 1 -> 0"));
         QThread::msleep(1000);
     }
-    if (const Gpu *dgpu = detectHardware(root).discreteGpu()) {
+    const Hardware hw = detectHardware(root);
+    if (const Gpu *dgpu = hw.discreteGpu()) {
         QStringList errors;
         for (const QString &a : removeDiscreteGpu(root, *dgpu, &errors))
             say(QStringLiteral("removed PCI device %1 to probe it again").arg(a));
