@@ -377,7 +377,7 @@ agino-gpu/
 
 硬件：ROG Zephyrus G16 GU605CW，Intel Arrow Lake 集显 + RTX 5080 Laptop（驱动 580.178.04），ASUS `gpu_mux_mode` 和 `dgpu_disable` 都有；内置屏 Samsung ATNA60DL01 OLED。
 
-- 通过：
+- 通过（P5 全部完成）：
   - `hybrid` ↔ `dedicated` 注销生效（V-1）。
   - `hybrid` → `mux-dedicated` → `hybrid` 重启生效。
   - sudo 组本地会话切换不弹授权框（D-150）。
@@ -388,10 +388,8 @@ agino-gpu/
   - 同一次开机里 `hybrid` → `mux-dedicated` → `hybrid` 后，重启仍停在直连。原因是 `gpu_mux_mode` 读回的是本次开机的位置，不是已写入、待生效的值（4.4）。`SetMode` 原先“读到的值已是目标就不写”，所以没写回 1。现在每次都写目标位置，回滚写回原模式对应的位置；已重启验证。
   - 混合模式下内置屏不能调亮度：屏没有 PWM 输入，i915 按 VBT 走了 PWM。修复属于 infra（D-151，kernel-graphics-hardware.md 10.19），与本项目无关；独显直连时亮度一直正常。
   - 读 `/proc/driver/nvidia/gpus/*/information` 会唤醒休眠的独显：测试脚本不再读它，状态只看 `power/runtime_status`。
-- 待补：
-  - 用最新包重测 `integrated` ↔ `hybrid`。
-  - 深色主题截图。
-  - D-151 的 grub.d 方案重启复验（157 暂时离线）。
+  - `hybrid` → `integrated` → `hybrid`（p5.10）重启生效。集显下独显已从 PCI 移除，`dgpu_disable=1`，agino-nvidia-check 记“没有 NVIDIA 显示设备”，不算失败，登录时不弹通知（agino-calamares-settings 26.0.39）。回到混合时，apply 依次做 `dgpu_disable 1 -> 0`、移除并重新扫描、重启 systemd-modules-load；独显恢复后加载 nvidia_drm，约 2 秒内进入 suspended，没有失败的单元。开机早期 journal 里会有 nvidia、snd_hda_intel 的“D3cold 无法唤醒”和 nvidia_drm 加载失败：那时 apply 还没给独显上电，属预期。
+  - 深色主题截图：信息卡、模式行、勾选图标和底部设置项的配色正确。集显模式下只提供“混合”“集显”（独显不可见，`offeredModes`），符合设计。
 
 ## 10. 分期
 
