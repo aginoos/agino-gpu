@@ -134,11 +134,59 @@ void recordFailure(const Root &root, const Hardware &hw, const QString &reason, 
         say(err);
 }
 
+// offload.env only in hybrid mode: in the others every application runs on one GPU anyway.
+void writeOffloadEnv(const Root &root, const Hardware &hw, Mode active)
+{
+    QString err;
+    const Gpu *dgpu = hw.discreteGpu();
+    const QString offloadPath = QString::fromLatin1(kOffloadEnvPath);
+    if (active == Mode::Hybrid && dgpu) {
+        const QStringList env = offloadEnvironment(*dgpu, nvidiaGpuCount(hw));
+        if (!root.writeFile(offloadPath, offloadEnvFileContents(env), 0644, &err))
+            say(err);
+        else
+            say(QStringLiteral("wrote %1 (%2 variables)").arg(offloadPath).arg(env.size()));
+    } else if (!root.removeFile(offloadPath, &err)) {
+        say(err);
+    }
+}
+
+// --x-start, from the lightdm display-setup script each time an X server starts (design.md
+// §3.2): hybrid <-> dedicated only needs a new X server (V-1, lightdm starts one at logout), so
+// the switch takes effect here and not only at the next boot. Every other change waits for it.
+int xServerStarted(const Root &root)
+{
+    const Mode configured = readConfiguredMode(root);
+    const std::optional<BootState> boot = readBootState(root);
+    const auto xOnly = [](Mode m) { return m == Mode::Hybrid || m == Mode::Dedicated; };
+    if (!boot || boot->active == configured || !xOnly(boot->active) || !xOnly(configured))
+        return 0;
+    // Xorg uses the NVIDIA GPU only through the generated file (SetMode writes it).
+    if (configured == Mode::Dedicated && !root.exists(QString::fromLatin1(kXorgDedicatedPath))) {
+        say(QStringLiteral("dedicated is saved but %1 is missing; staying in %2")
+                .arg(QString::fromLatin1(kXorgDedicatedPath), modeToString(boot->active)));
+        return 0;
+    }
+    const Hardware hw = detectHardware(root);
+    if (!hw.discreteGpu())
+        return 0;
+    QString err;
+    if (!writeBootState(root, BootState{configured, QString(), configured}, &err))
+        say(err);
+    else
+        say(QStringLiteral("X server started: active mode %1 -> %2")
+                .arg(modeToString(boot->active), modeToString(configured)));
+    writeOffloadEnv(root, hw, configured);
+    return 0;
+}
+
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
     const Root root = Root::fromEnvironment();
+    if (argc > 1 && qstrcmp(argv[1], "--x-start") == 0)
+        return xServerStarted(root);
     const Mode configured = readConfiguredMode(root);
     say(QStringLiteral("configured mode: %1").arg(modeToString(configured)));
 
@@ -221,16 +269,6 @@ int main()
     else
         say(QStringLiteral("active mode: %1").arg(modeToString(active)));
 
-    const Gpu *dgpu = hw.discreteGpu();
-    const QString offloadPath = QString::fromLatin1(kOffloadEnvPath);
-    if (active == Mode::Hybrid && dgpu) {
-        const QStringList env = offloadEnvironment(*dgpu, nvidiaGpuCount(hw));
-        if (!root.writeFile(offloadPath, offloadEnvFileContents(env), 0644, &err))
-            say(err);
-        else
-            say(QStringLiteral("wrote %1 (%2 variables)").arg(offloadPath).arg(env.size()));
-    } else if (!root.removeFile(offloadPath, &err)) {
-        say(err);
-    }
+    writeOffloadEnv(root, hw, active);
     return 0;
 }

@@ -6,6 +6,9 @@
 
 ROOT="${AGINO_GPU_ROOT:-}"
 
+# A switch between hybrid and dedicated takes effect with this X server (agino-gpu-apply --x-start).
+[ -n "$ROOT" ] || "$(dirname "$0")/agino-gpu-apply" --x-start || true
+
 grep -qx 'active=dedicated' "$ROOT/run/agino-gpu/state" 2>/dev/null || exit 0
 
 has_nvidia=0
