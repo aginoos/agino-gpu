@@ -190,7 +190,7 @@ MESA_VK_DEVICE_SELECT=1002:73df       # vendor:device，配合 Mesa 的 device-s
 
 ### 5.4 应用兼容（D-141 第 8 条）
 
-P4 只做内置识别，不做通用的 profiles/*.json 配置机制；不改应用自己的文件。Chromium 类应用在带 `__NV_PRIME_RENDER_OFFLOAD=1` 时需要 ANGLE-Vulkan 启动参数（5.4.1），**只有一份实现：`agino-gpu-run`（`src/lib/chromium.cpp` + `src/run`）**。DAM 补丁在最终环境含 `__NV_PRIME_RENDER_OFFLOAD=1` 时改为执行 `/usr/bin/agino-gpu-run -- PROGRAM ARGS`（供启动器/任务栏菜单和始终用独显规则，见 5.3 第 1、2 项）；Exec 以 `env` 开头时按 GNU env 的规则找到真正的程序（选项、`-S` 字符串、嵌套 env，infra D-148 补充），Exec 自己去掉该变量或设成 1 以外的值时不包装。`agino-gpu-run` 只补环境里缺少的变量（已有同名变量优先，`env -i` 清掉的由它补回），Chromium 参数只在最终环境 `__NV_PRIME_RENDER_OFFLOAD=1` 时加；Debian 的 `/etc/chromium.d/zz-agino-gpu`（包装脚本按文件名顺序读取，`zz-` 保证最后执行、看到完整的 `CHROMIUM_FLAGS`）同样交给 `agino-gpu-run --chromium -- /usr/bin/chromium …`。Flatpak 不在 P4 范围（用户决定 2026-10-26）。
+P4 只做内置识别，不做通用的 profiles/*.json 配置机制；不改应用自己的文件。Chromium 类应用在带 `__NV_PRIME_RENDER_OFFLOAD=1` 时需要 ANGLE-Vulkan 启动参数（5.4.1），**只有一份实现：`agino-gpu-run`（`src/lib/chromium.cpp` + `src/run`）**。DAM 补丁在最终环境含 `__NV_PRIME_RENDER_OFFLOAD=1` 时改为执行 `/usr/bin/agino-gpu-run -- PROGRAM ARGS`（供启动器/任务栏菜单和始终用独显规则，见 5.3 第 1、2 项）；Exec 以 `env` 开头时按 GNU env 的规则找到真正的程序（选项、`-S` 字符串、嵌套 env，infra D-148 补充），Exec 自己去掉该变量或设成 1 以外的值时不包装，并从启动环境里去掉 offload.env 中它自己没设的其他变量（只剩这些变量时 GLX/EGL 和 Vulkan 都只认 NVIDIA，程序没有可用的 GPU，Chromium 会整体禁用 GPU；DAM 1.2.59.6）。`agino-gpu-run` 只补环境里缺少的变量（已有同名变量优先，`env -i` 清掉的由它补回），Chromium 参数只在最终环境 `__NV_PRIME_RENDER_OFFLOAD=1` 时加；Debian 的 `/etc/chromium.d/zz-agino-gpu`（包装脚本按文件名顺序读取，`zz-` 保证最后执行、看到完整的 `CHROMIUM_FLAGS`）同样交给 `agino-gpu-run --chromium -- /usr/bin/chromium …`。Flatpak 不在 P4 范围（用户决定 2026-10-26）。
 
 | 应用类别 | 问题 | 处理 |
 |---|---|---|
