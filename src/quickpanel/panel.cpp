@@ -28,6 +28,9 @@ constexpr int kUsersIntervalMs = 2000;
 constexpr int kSidePadding = 10;
 constexpr int kSectionSpacing = 10;
 constexpr int kUsersSpacing = 4;
+// The X server keeps the discrete GPU open in hybrid mode (its GPU screen) without waking it;
+// it is not an app the user started, so the list leaves it out.
+const QStringList kDisplayServers = { QStringLiteral("Xorg"), QStringLiteral("Xwayland") };
 // Restart and log out close the panel first; the session request follows once it has gone, or
 // the panel stays on the darkening screen until the session ends.
 constexpr int kSessionRequestDelayMs = 300;
@@ -160,7 +163,7 @@ void Panel::showUsers(const QList<GpuUser> &users)
     }
     QStringList names;
     for (const GpuUser &user : users) {
-        if (!user.name.isEmpty() && !names.contains(user.name))
+        if (!user.name.isEmpty() && !names.contains(user.name) && !kDisplayServers.contains(user.name))
             names << user.name;
     }
     for (const QString &name : names) {
