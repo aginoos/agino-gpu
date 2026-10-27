@@ -21,6 +21,8 @@ add_library(agino-gpu-quickpanel MODULE
     modeswitcher.h
     bannerwidget.cpp
     bannerwidget.h
+    itemrow.cpp
+    itemrow.h
     modelist.cpp
     modelist.h
     failurenotifier.cpp
@@ -31,6 +33,13 @@ add_library(agino-gpu-quickpanel MODULE
     agino-gpu.json
 )
 target_compile_definitions(agino-gpu-quickpanel PRIVATE QT_PLUGIN)
+# DTK looks up built-in icons under :/icons/deepin/builtin; "texts" icons follow the text colour.
+# open-arrow comes from dde-tray-loader 2.0.38 (LGPL-3.0-or-later), renamed to stay ours.
+qt_add_resources(agino-gpu-quickpanel quickpanel-icons
+    PREFIX "/icons/deepin/builtin"
+    BASE icons
+    FILES icons/texts/agino-gpu-open-arrow_16px.svg
+)
 target_include_directories(agino-gpu-quickpanel PRIVATE ${DDE_TRAY_LOADER_INCLUDE_DIR})
 target_link_libraries(agino-gpu-quickpanel PRIVATE
     agino-gpu-client

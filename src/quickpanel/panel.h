@@ -47,7 +47,7 @@ private:
     GpuState *m_state;
     GpuControl *m_control;
     ModeSwitcher *m_switcher;
-    Dtk::Widget::DLabel *m_dgpuStatus;
+    Dtk::Widget::DLabel *m_dgpuStatus = nullptr;
     BannerWidget *m_banner;
     ModeList *m_modes;
     QWidget *m_usersGroup;

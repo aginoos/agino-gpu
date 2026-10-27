@@ -5,15 +5,15 @@
 #include "agino-gpu-client/texts.h"
 #include "constants.h"
 #include "controlcenter.h"
+#include "itemrow.h"
 #include "modelist.h"
 #include "qptexts.h"
 
 #include <DFontSizeManager>
 #include <DLabel>
-#include <DPalette>
 
 #include <QHBoxLayout>
-#include <QPushButton>
+#include <QIcon>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -24,6 +24,10 @@ namespace AginoGpu {
 
 namespace {
 constexpr int kUsersIntervalMs = 2000;
+// dde-tray-loader's sub-pages: 10 px from the popup edge and between sections.
+constexpr int kSidePadding = 10;
+constexpr int kSectionSpacing = 10;
+constexpr int kUsersSpacing = 4;
 // Restart and log out close the panel first; the session request follows once it has gone, or
 // the panel stays on the darkening screen until the session ends.
 constexpr int kSessionRequestDelayMs = 300;
@@ -34,7 +38,6 @@ Panel::Panel(GpuState *state, QWidget *parent)
     , m_state(state)
     , m_control(new GpuControl(this))
     , m_switcher(new ModeSwitcher(state, m_control, this))
-    , m_dgpuStatus(new DLabel(this))
     , m_banner(new BannerWidget(this))
     , m_modes(new ModeList(this))
     , m_usersGroup(new QWidget(this))
@@ -44,49 +47,48 @@ Panel::Panel(GpuState *state, QWidget *parent)
     setFixedWidth(Dock::DOCK_POPUP_WIDGET_WIDTH);
 
     // The quick panel draws the "‹ Graphics" title bar of the sub-page itself (dde-shell
-    // SubPluginPage, from pluginDisplayName); the first row here is the discrete GPU's status.
-    auto *dgpuLabel = new DLabel(QpTexts::discreteGpu(), this);
-    DFontSizeManager::instance()->bind(dgpuLabel, DFontSizeManager::T6);
-    DFontSizeManager::instance()->bind(m_dgpuStatus, DFontSizeManager::T8);
-    m_dgpuStatus->setForegroundRole(DPalette::TextTips);
+    // SubPluginPage, from pluginDisplayName); the first row here is the discrete GPU's status,
+    // as a section caption like Bluetooth's "My Devices".
+    auto *dgpuLabel = createSectionLabel(QpTexts::discreteGpu(), this);
+    m_dgpuStatus = createSectionLabel(QString(), this);
 
     auto *header = new QHBoxLayout;
-    header->setContentsMargins(10, 0, 10, 0);
+    header->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
     header->addWidget(dgpuLabel);
     header->addStretch(1);
     header->addWidget(m_dgpuStatus);
 
-    auto *usersTitle = new DLabel(QpTexts::dgpuAppsTitle(), m_usersGroup);
-    DFontSizeManager::instance()->bind(usersTitle, DFontSizeManager::T6);
-    usersTitle->setForegroundRole(DPalette::TextTips);
-    m_usersLayout->setContentsMargins(0, 0, 0, 0);
-    m_usersLayout->setSpacing(4);
+    auto *usersTitle = createSectionLabel(QpTexts::dgpuAppsTitle(), m_usersGroup);
+    m_usersLayout->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
+    m_usersLayout->setSpacing(kUsersSpacing);
     m_usersLayout->addWidget(usersTitle);
     m_usersGroup->setLayout(m_usersLayout);
-    m_usersGroup->setContentsMargins(20, 0, 20, 0);
     m_usersGroup->setVisible(false);
 
-    auto *settings = new QPushButton(Texts::settings(), this);
-    settings->setFlat(true);
-    settings->setFocusPolicy(Qt::NoFocus);
-    settings->setCursor(Qt::PointingHandCursor);
+    auto *settings = new ItemRow(this);
+    settings->addIcon(QIcon::fromTheme(QStringLiteral("agino-gpu-open-arrow")));
+    settings->addLabel(Texts::settings(), ItemRow::Text::Primary);
 
-    auto *bannerHolder = new QHBoxLayout;
-    bannerHolder->setContentsMargins(10, 0, 10, 0);
-    bannerHolder->addWidget(m_banner);
+    auto *content = new QVBoxLayout;
+    content->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
+    content->setSpacing(kSectionSpacing);
+    content->addWidget(m_banner);
+    content->addWidget(m_modes);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 10, 0, 10);
-    layout->setSpacing(8);
+    layout->setContentsMargins(0, kSidePadding, 0, kSidePadding);
+    layout->setSpacing(kSectionSpacing);
     layout->addLayout(header);
-    layout->addLayout(bannerHolder);
-    layout->addWidget(m_modes);
+    layout->addLayout(content);
     layout->addWidget(m_usersGroup);
     layout->addStretch(1);
-    layout->addWidget(settings);
+    auto *footer = new QVBoxLayout;
+    footer->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
+    footer->addWidget(settings);
+    layout->addLayout(footer);
 
     m_usersTimer->setInterval(kUsersIntervalMs);
-    connect(settings, &QPushButton::clicked, this, &Panel::openSettings);
+    connect(settings, &ItemRow::clicked, this, &Panel::openSettings);
     connect(m_modes, &ModeList::modeClicked, m_switcher, &ModeSwitcher::select);
     connect(m_switcher, &ModeSwitcher::changed, this, &Panel::refresh);
     connect(m_usersTimer, &QTimer::timeout, this, &Panel::refreshUsers);
@@ -161,8 +163,13 @@ void Panel::showUsers(const QList<GpuUser> &users)
         if (!user.name.isEmpty() && !names.contains(user.name))
             names << user.name;
     }
-    for (const QString &name : names)
-        m_usersLayout->addWidget(new DLabel(name, m_usersGroup));
+    for (const QString &name : names) {
+        auto *label = new DLabel(name, m_usersGroup);
+        label->setElideMode(Qt::ElideRight);
+        label->setForegroundRole(QPalette::BrightText);
+        DFontSizeManager::instance()->bind(label, DFontSizeManager::T8);
+        m_usersLayout->addWidget(label);
+    }
     m_usersGroup->setVisible(!names.isEmpty());
 }
 

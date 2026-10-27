@@ -6,15 +6,10 @@
 #include <QList>
 #include <QWidget>
 
-class QRadioButton;
-
-namespace Dtk::Widget {
-class DLabel;
-}
-
 namespace AginoGpu {
 
-// One radio row per offered mode: the mode name, and on unselected rows what switching costs.
+// One row per offered mode: the mode name, a check mark on the saved mode and, on the others,
+// what switching costs.
 // Rows do not toggle themselves; the owner calls setModes() with the configured mode.
 class ModeList : public QWidget
 {
@@ -29,6 +24,11 @@ Q_SIGNALS:
 
 private:
     void clear();
+
+    bool m_built = false;
+    QList<Mode> m_offered;
+    Mode m_configured = Mode::Hybrid;
+    Mode m_active = Mode::Hybrid;
 };
 
 } // namespace AginoGpu

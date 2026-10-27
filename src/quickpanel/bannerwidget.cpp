@@ -12,17 +12,26 @@ DWIDGET_USE_NAMESPACE
 
 namespace AginoGpu {
 
+namespace {
+// Same ground as the rows (itemrow.cpp) and dde-tray-loader's JumpSettingButton.
+constexpr int kPadding = 10;
+constexpr int kRadius = 8;
+constexpr qreal kBackgroundAlpha = 0.05;
+}
+
 BannerWidget::BannerWidget(QWidget *parent)
     : QFrame(parent)
     , m_label(new DLabel(this))
     , m_buttons(new QHBoxLayout)
 {
     m_label->setWordWrap(true);
+    m_label->setForegroundRole(QPalette::BrightText);
+    setForegroundRole(QPalette::BrightText);
     m_buttons->setContentsMargins(0, 0, 0, 0);
     m_buttons->setSpacing(8);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(12, 10, 12, 10);
+    layout->setContentsMargins(kPadding, kPadding, kPadding, kPadding);
     layout->setSpacing(8);
     layout->addWidget(m_label);
     layout->addLayout(m_buttons);
@@ -53,11 +62,11 @@ void BannerWidget::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    QColor fill = palette().color(QPalette::Text);
-    fill.setAlphaF(0.08);
+    QColor fill = palette().brightText().color();
+    fill.setAlphaF(kBackgroundAlpha);
     painter.setPen(Qt::NoPen);
     painter.setBrush(fill);
-    painter.drawRoundedRect(rect(), 8, 8);
+    painter.drawRoundedRect(rect(), kRadius, kRadius);
 }
 
 } // namespace AginoGpu
