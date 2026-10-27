@@ -5,7 +5,7 @@
     <name>Gpu</name>
     <message>
         <source>Graphics</source>
-        <translation>Grafik</translation>
+        <translation>Grafikkarte</translation>
     </message>
 </context>
 <context>

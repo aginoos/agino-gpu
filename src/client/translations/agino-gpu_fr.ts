@@ -5,7 +5,7 @@
     <name>AginoGpu</name>
     <message>
         <source>Graphics</source>
-        <translation>Graphismes</translation>
+        <translation>Carte graphique</translation>
     </message>
     <message>
         <source>Hybrid</source>
