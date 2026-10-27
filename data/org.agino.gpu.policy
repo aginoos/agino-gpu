@@ -8,8 +8,32 @@
   <action id="org.agino.gpu.set-mode">
     <description>Change the graphics mode</description>
     <description xml:lang="zh_CN">切换显卡模式</description>
+    <description xml:lang="zh_TW">切換顯示卡模式</description>
+    <description xml:lang="zh_HK">切換顯示卡模式</description>
+    <description xml:lang="ja">グラフィックモードを変更</description>
+    <description xml:lang="ko">그래픽 모드 변경</description>
+    <description xml:lang="de">Grafikmodus ändern</description>
+    <description xml:lang="fr">Changer le mode graphique</description>
+    <description xml:lang="es">Cambiar el modo gráfico</description>
+    <description xml:lang="pt_BR">Alterar o modo gráfico</description>
+    <description xml:lang="ru">Изменить графический режим</description>
+    <description xml:lang="it">Cambia la modalità grafica</description>
+    <description xml:lang="ar">تغيير وضع الرسوميات</description>
+    <description xml:lang="uk">Змінити графічний режим</description>
     <message>Authentication is required to change the graphics mode</message>
     <message xml:lang="zh_CN">切换显卡模式需要认证</message>
+    <message xml:lang="zh_TW">切換顯示卡模式需要認證</message>
+    <message xml:lang="zh_HK">切換顯示卡模式需要認證</message>
+    <message xml:lang="ja">グラフィックモードを変更するには認証が必要です</message>
+    <message xml:lang="ko">그래픽 모드를 변경하려면 인증이 필요합니다</message>
+    <message xml:lang="de">Zum Ändern des Grafikmodus ist eine Authentifizierung erforderlich</message>
+    <message xml:lang="fr">Une authentification est nécessaire pour changer le mode graphique</message>
+    <message xml:lang="es">Se requiere autenticación para cambiar el modo gráfico</message>
+    <message xml:lang="pt_BR">É necessária autenticação para alterar o modo gráfico</message>
+    <message xml:lang="ru">Для изменения графического режима требуется аутентификация</message>
+    <message xml:lang="it">È richiesta l'autenticazione per cambiare la modalità grafica</message>
+    <message xml:lang="ar">المصادقة مطلوبة لتغيير وضع الرسوميات</message>
+    <message xml:lang="uk">Для зміни графічного режиму потрібна автентифікація</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
@@ -20,8 +44,32 @@
   <action id="org.agino.gpu.list-all-users">
     <description>List all processes that use the discrete GPU</description>
     <description xml:lang="zh_CN">列出所有使用独立显卡的进程</description>
+    <description xml:lang="zh_TW">列出所有使用獨立顯示卡的處理程序</description>
+    <description xml:lang="zh_HK">列出所有使用獨立顯示卡的程序</description>
+    <description xml:lang="ja">ディスクリートGPUを使用しているすべてのプロセスを一覧表示</description>
+    <description xml:lang="ko">외장 GPU를 사용하는 모든 프로세스 보기</description>
+    <description xml:lang="de">Alle Prozesse auflisten, die die dedizierte Grafikkarte verwenden</description>
+    <description xml:lang="fr">Lister tous les processus qui utilisent le GPU dédié</description>
+    <description xml:lang="es">Listar todos los procesos que usan la GPU dedicada</description>
+    <description xml:lang="pt_BR">Listar todos os processos que usam a GPU dedicada</description>
+    <description xml:lang="ru">Показать все процессы, использующие дискретную видеокарту</description>
+    <description xml:lang="it">Elenca tutti i processi che usano la GPU dedicata</description>
+    <description xml:lang="ar">عرض جميع العمليات التي تستخدم بطاقة الرسوميات المنفصلة</description>
+    <description xml:lang="uk">Показати всі процеси, що використовують дискретну відеокарту</description>
     <message>Authentication is required to list the processes of other users that use the discrete GPU</message>
     <message xml:lang="zh_CN">查看其他用户使用独立显卡的进程需要认证</message>
+    <message xml:lang="zh_TW">檢視其他使用者使用獨立顯示卡的處理程序需要認證</message>
+    <message xml:lang="zh_HK">查看其他用戶使用獨立顯示卡的程序需要認證</message>
+    <message xml:lang="ja">ディスクリートGPUを使用している他のユーザーのプロセスを一覧表示するには認証が必要です</message>
+    <message xml:lang="ko">외장 GPU를 사용하는 다른 사용자의 프로세스를 보려면 인증이 필요합니다</message>
+    <message xml:lang="de">Zum Auflisten der Prozesse anderer Benutzer, die die dedizierte Grafikkarte verwenden, ist eine Authentifizierung erforderlich</message>
+    <message xml:lang="fr">Une authentification est nécessaire pour lister les processus des autres utilisateurs qui utilisent le GPU dédié</message>
+    <message xml:lang="es">Se requiere autenticación para listar los procesos de otros usuarios que usan la GPU dedicada</message>
+    <message xml:lang="pt_BR">É necessária autenticação para listar os processos de outros usuários que usam a GPU dedicada</message>
+    <message xml:lang="ru">Для просмотра процессов других пользователей, использующих дискретную видеокарту, требуется аутентификация</message>
+    <message xml:lang="it">È richiesta l'autenticazione per elencare i processi di altri utenti che usano la GPU dedicata</message>
+    <message xml:lang="ar">المصادقة مطلوبة لعرض عمليات المستخدمين الآخرين التي تستخدم بطاقة الرسوميات المنفصلة</message>
+    <message xml:lang="uk">Для перегляду процесів інших користувачів, що використовують дискретну відеокарту, потрібна автентифікація</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
