@@ -43,7 +43,8 @@ struct BootState
 std::optional<BootState> readBootState(const Root &root); // nullopt when the file is missing
 bool writeBootState(const Root &root, const BootState &state, QString *error = nullptr);
 
-// /var/lib/agino-gpu/last-failure: free text, kept until the user dismisses it.
+// /var/lib/agino-gpu/last-failure: free text, kept until the user dismisses it or a later boot
+// applies the saved mode.
 QString readLastFailure(const Root &root);
 
 // design.md §3.3 pre-switch checks.

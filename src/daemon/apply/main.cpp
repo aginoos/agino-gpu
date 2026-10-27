@@ -28,24 +28,57 @@ void say(const QString &line)
     std::fflush(stdout);
 }
 
-// The ASUS firmware keeps the dGPU powered off across reboots once dgpu_disable=1; any mode
-// that needs the GPU must power it on and rescan before we look at the hardware.
-void wakeAsusDgpu(const Root &root)
+// Run the modules-load.d entries again. udev loads only the driver a device asks for (nvidia);
+// the ones listed there (nvidia_drm) failed earlier in this boot while the discrete GPU was off,
+// removed or blocked.
+void loadConfiguredModules(const Root &root)
 {
-    const auto value = root.readTrimmed(kAsusDgpuDisablePath);
-    if (!value || *value != QLatin1String("1"))
+    if (!root.prefix().isEmpty())
         return;
+    QProcess modulesLoad;
+    modulesLoad.start(QString::fromLatin1(kSystemdModulesLoad), QStringList());
+    if (!modulesLoad.waitForFinished(15000) || modulesLoad.exitStatus() != QProcess::NormalExit
+        || modulesLoad.exitCode() != 0)
+        say(QStringLiteral("%1 failed").arg(QString::fromLatin1(kSystemdModulesLoad)));
+    else
+        say(QStringLiteral("modules-load.d modules loaded"));
+}
+
+// Bring the discrete GPU (back) onto the bus with its driver. The ASUS firmware keeps it powered
+// off across reboots once dgpu_disable=1, yet it is enumerated at coldplug and its driver fails
+// to probe it (D3cold); a rescan does not probe a device that exists. So: power it on, remove
+// what is visible of it (removed already in integrated mode, or driverless) and rescan, which
+// adds it again and udev loads the driver.
+void bringBackDiscreteGpu(const Root &root)
+{
     QString err;
-    if (!writeSysfsValue(root, kAsusDgpuDisablePath, "0", &err)) {
-        say(err);
-        return;
+    if (root.readTrimmed(kAsusDgpuDisablePath).value_or(QString()) == QLatin1String("1")) {
+        if (!writeSysfsValue(root, kAsusDgpuDisablePath, "0", &err)) {
+            say(err);
+            return;
+        }
+        say(QStringLiteral("dgpu_disable 1 -> 0"));
+        QThread::msleep(1000);
     }
-    say(QStringLiteral("dgpu_disable 1 -> 0"));
-    QThread::msleep(1000);
+    if (const Gpu *dgpu = detectHardware(root).discreteGpu()) {
+        QStringList errors;
+        for (const QString &a : removeDiscreteGpu(root, *dgpu, &errors))
+            say(QStringLiteral("removed PCI device %1 to probe it again").arg(a));
+        for (const QString &e : std::as_const(errors))
+            say(e);
+    }
     if (!writeSysfsValue(root, kPciRescanPath, "1", &err))
         say(err);
     else
         say(QStringLiteral("PCI rescan requested"));
+    loadConfiguredModules(root);
+}
+
+// Any mode but integrated needs the discrete GPU: power it on before we look at the hardware.
+void wakeAsusDgpu(const Root &root)
+{
+    if (root.readTrimmed(kAsusDgpuDisablePath).value_or(QString()) == QLatin1String("1"))
+        bringBackDiscreteGpu(root);
 }
 
 // ASUS laptops create asus-nb-wmi (gpu_mux_mode, dgpu_disable) when the platform module
@@ -72,37 +105,15 @@ bool integratedHasDisplay(const Root &root)
     return false;
 }
 
-// Undo integrated mode: keep the udev helper away, power the GPU on, rescan for a removed GPU
-// and replay "add" for a visible one, so udev loads its driver now that the modprobe block is
-// gone (recordFailure with persist removes it first).
-void restoreDiscreteGpu(const Root &root, const Hardware &hw)
+// Undo integrated mode: keep the udev helper away, then bring the GPU back (the modprobe block is
+// gone already: recordFailure with persist removes it first).
+void restoreDiscreteGpu(const Root &root)
 {
     QString err;
     if (!root.writeFile(kKeepDgpuPath, QByteArray(), 0644, &err))
         say(err);
-    if (root.readTrimmed(kAsusDgpuDisablePath).value_or(QString()) == QLatin1String("1")
-        && !writeSysfsValue(root, kAsusDgpuDisablePath, "0", &err))
-        say(err);
-    if (!writeSysfsValue(root, kPciRescanPath, "1", &err))
-        say(err);
-    else
-        say(QStringLiteral("discrete GPU restored (PCI rescan)"));
-    if (const Gpu *dgpu = hw.discreteGpu()) {
-        for (const QString &addr : QStringList{dgpu->pciAddress} + dgpu->functions) {
-            if (!writeSysfsValue(root, QStringLiteral("/sys/bus/pci/devices/%1/uevent").arg(addr), "add", &err))
-                say(err);
-        }
-    }
-    // udev loads only the driver the device asks for (nvidia); the modules listed in
-    // /etc/modules-load.d (nvidia_drm) were refused earlier in this boot, so load them again.
-    if (root.prefix().isEmpty()) {
-        QProcess modulesLoad;
-        modulesLoad.start(QString::fromLatin1(kSystemdModulesLoad), QStringList());
-        if (!modulesLoad.waitForFinished(15000) || modulesLoad.exitCode() != 0)
-            say(QStringLiteral("%1 failed").arg(QString::fromLatin1(kSystemdModulesLoad)));
-        else
-            say(QStringLiteral("modules-load.d modules loaded"));
-    }
+    bringBackDiscreteGpu(root);
+    say(QStringLiteral("discrete GPU restored"));
 }
 
 // persist=false: the saved mode stays as the user chose it and is tried again next boot (the
@@ -196,11 +207,16 @@ int main()
         active = hw.mux.available && hw.mux.dedicatedActive ? Mode::MuxDedicated : Mode::Hybrid;
     }
     if (restoreDgpu) {
-        restoreDiscreteGpu(root, hw);
+        restoreDiscreteGpu(root);
         hw = detectHardware(root);
     }
 
     QString err;
+    // The saved mode is in place: a failure kept from an earlier boot is over, and would leave
+    // the tile red until dismissed.
+    if (failure.isEmpty() && active == configured && root.exists(QString::fromLatin1(kLastFailurePath))
+        && !root.removeFile(QString::fromLatin1(kLastFailurePath), &err))
+        say(err);
     if (!writeBootState(root, BootState{active, failure, configured}, &err))
         say(err);
     else
