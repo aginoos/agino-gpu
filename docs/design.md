@@ -135,7 +135,7 @@ EndSection
 
 ### 4.4 mux-dedicated（独显直连）
 
-- 后端接口 `MuxBackend`（能力检测、读取当前位置、写入目标位置）。第一期实现 `AsusWmiMux`：`/sys/devices/platform/asus-nb-wmi/gpu_mux_mode`，0 = 独显直连，1 = 混合；写入后固件在下次开机生效。
+- 后端接口 `MuxBackend`（能力检测、读取当前位置、写入目标位置）。第一期实现 `AsusWmiMux`：`/sys/devices/platform/asus-nb-wmi/gpu_mux_mode`，0 = 独显直连，1 = 混合；写入后固件在下次开机生效。**读回的是本次开机的位置，不是已写入、待下次开机的位置**（157 实测 2026-10-27：开机为 0 时写 1，读回仍是 0），所以 SetMode 每次都写目标位置、回滚按原模式推算，不能"读出来比较、相同就不写"（否则同一次开机里 混合 → 直连 → 混合 会停在直连）。内核提示 `/sys/devices/platform/asus-nb-wmi` 下的属性已弃用、将改到 `/sys/class/firmware_attributes`（asus-armoury），后续要跟进。
 - 其他厂商（Lenovo、MSI 等）没有主线内核接口，不实现，留接口。
 - 直连状态下集显不可见，Xorg 只有独显；daemon 报告 `ActiveMode=mux-dedicated`，界面只提供“改回混合（需重启）”。
 

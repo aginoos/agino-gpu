@@ -289,17 +289,20 @@ void GpuService::finishSetMode(const QDBusMessage &message, Mode target, bool fo
     }
 
     const Mode previous = readConfiguredMode(m_root);
-    const std::optional<QString> previousMux = hw.mux.available && !hw.mux.sysfsPath.isEmpty()
-        ? m_root.readTrimmed(hw.mux.sysfsPath)
-        : std::nullopt;
+    // gpu_mux_mode reads back the position of this boot, not the one written for the next, so
+    // it cannot be compared: write the position the mode needs every time (hybrid -> direct ->
+    // hybrid in one boot must end at hybrid), and roll back to the previous mode's position.
+    const bool hasMux = hw.mux.available && !hw.mux.sysfsPath.isEmpty();
+    const auto muxValue = [](Mode mode) {
+        return QByteArray(mode == Mode::MuxDedicated ? kMuxDedicatedValue : kMuxHybridValue);
+    };
     const auto rollback = [&]() {
         QString e;
         if (!writeConfiguredMode(m_root, previous, &e))
             qWarning("SetMode rollback: %s", qPrintable(e));
         if (!applyGeneratedFiles(m_root, hw, previous, &e))
             qWarning("SetMode rollback: %s", qPrintable(e));
-        if (previousMux && m_root.readTrimmed(hw.mux.sysfsPath) != previousMux
-            && !writeSysfsValue(m_root, hw.mux.sysfsPath, previousMux->toUtf8(), &e))
+        if (hasMux && !writeSysfsValue(m_root, hw.mux.sysfsPath, muxValue(previous), &e))
             qWarning("SetMode rollback: %s", qPrintable(e));
     };
 
@@ -317,17 +320,11 @@ void GpuService::finishSetMode(const QDBusMessage &message, Mode target, bool fo
     }
 
     // The MUX position is latched by the firmware at the next boot, so it is written now.
-    if (hw.mux.available && !hw.mux.sysfsPath.isEmpty()) {
-        const QByteArray want = target == Mode::MuxDedicated ? kMuxDedicatedValue : kMuxHybridValue;
-        const auto current = m_root.readTrimmed(hw.mux.sysfsPath);
-        if (!current || current->toUtf8() != want) {
-            if (!writeSysfsValue(m_root, hw.mux.sysfsPath, want, &err)) {
-                qWarning("SetMode: %s", qPrintable(err));
-                rollback();
-                replyError(message, kErrorFailed, err);
-                return;
-            }
-        }
+    if (hasMux && !writeSysfsValue(m_root, hw.mux.sysfsPath, muxValue(target), &err)) {
+        qWarning("SetMode: %s", qPrintable(err));
+        rollback();
+        replyError(message, kErrorFailed, err);
+        return;
     }
 
     qInfo("SetMode: configured mode %s -> %s", qPrintable(modeToString(previous)), qPrintable(modeToString(target)));
