@@ -4,6 +4,7 @@
 #include <QFrame>
 #include <QIcon>
 #include <QList>
+#include <QString>
 
 class QHBoxLayout;
 
@@ -60,6 +61,35 @@ private:
     QList<Dtk::Widget::DLabel *> m_secondary;
     QList<ItemIcon *> m_icons;
     bool m_hovered = false;
+};
+
+// A static card in the rows' resting colours: one 36 px line per entry, the title at left and the
+// value at right (no hover, not clickable). Used for the GPUs and their state.
+class InfoCard : public QFrame
+{
+    Q_OBJECT
+public:
+    struct Line
+    {
+        QString title;
+        QString value;
+        bool operator==(const Line &other) const { return title == other.title && value == other.value; }
+    };
+
+    explicit InfoCard(QWidget *parent = nullptr);
+
+    void setLines(const QList<Line> &lines);
+
+protected:
+    bool event(QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    void applyColors();
+
+    QList<Line> m_lines;
+    QList<Dtk::Widget::DLabel *> m_titles;
+    QList<Dtk::Widget::DLabel *> m_values;
 };
 
 // A section caption (T10, black or white at 60 % by theme), like Bluetooth's "My Devices".

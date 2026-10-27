@@ -12,6 +12,8 @@
 #include "tile.h"
 
 #include <QCoreApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLocale>
 #include <QTranslator>
 
@@ -110,6 +112,20 @@ QWidget *AginoGpuPlugin::itemPopupApplet(const QString &itemKey)
         // itemWidget(key) to close the panel, and kItemKey has no widget.
         connect(m_panel, &Panel::requestHide, this,
                 [this] { m_proxyInter->requestSetAppletVisible(this, Dock::QUICK_ITEM_KEY, false); });
+        m_panel->setPageMinimumHeight(m_appletMinHeight);
     }
     return m_panel;
+}
+
+// The quick panel tells each sub-page how high the page area is (setAppletMinHeight), so the
+// page can fill it and keep its settings entry at the bottom, like the Bluetooth page.
+QString AginoGpuPlugin::message(const QString &message)
+{
+    const QJsonObject object = QJsonDocument::fromJson(message.toUtf8()).object();
+    if (object.value(Dock::MSG_TYPE).toString() == Dock::MSG_SET_APPLET_MIN_HEIGHT) {
+        m_appletMinHeight = qMax(0, object.value(Dock::MSG_DATA).toInt());
+        if (m_panel)
+            m_panel->setPageMinimumHeight(m_appletMinHeight);
+    }
+    return QStringLiteral("{}");
 }

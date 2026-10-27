@@ -35,6 +35,7 @@ public:
     void init(PluginProxyInterface *proxyInter) override;
     QWidget *itemWidget(const QString &itemKey) override;
     QWidget *itemPopupApplet(const QString &itemKey) override;
+    QString message(const QString &message) override;
     Dock::PluginFlags flags() const override { return Dock::Type_Quick | Dock::Quick_Panel_Multi; }
 
 private:
@@ -49,4 +50,5 @@ private:
     QPointer<AginoGpu::Tile> m_tile;
     QPointer<AginoGpu::Panel> m_panel;
     bool m_shown = false;
+    int m_appletMinHeight = 0;
 };

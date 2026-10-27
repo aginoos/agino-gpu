@@ -41,6 +41,7 @@ Panel::Panel(GpuState *state, QWidget *parent)
     , m_state(state)
     , m_control(new GpuControl(this))
     , m_switcher(new ModeSwitcher(state, m_control, this))
+    , m_gpus(new InfoCard(this))
     , m_banner(new BannerWidget(this))
     , m_modes(new ModeList(this))
     , m_usersGroup(new QWidget(this))
@@ -50,17 +51,7 @@ Panel::Panel(GpuState *state, QWidget *parent)
     setFixedWidth(Dock::DOCK_POPUP_WIDGET_WIDTH);
 
     // The quick panel draws the "‹ Graphics" title bar of the sub-page itself (dde-shell
-    // SubPluginPage, from pluginDisplayName); the first row here is the discrete GPU's status,
-    // as a section caption like Bluetooth's "My Devices".
-    auto *dgpuLabel = createSectionLabel(QpTexts::discreteGpu(), this);
-    m_dgpuStatus = createSectionLabel(QString(), this);
-
-    auto *header = new QHBoxLayout;
-    header->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
-    header->addWidget(dgpuLabel);
-    header->addStretch(1);
-    header->addWidget(m_dgpuStatus);
-
+    // SubPluginPage, from pluginDisplayName); the page starts with the GPUs and their state.
     auto *usersTitle = createSectionLabel(QpTexts::dgpuAppsTitle(), m_usersGroup);
     m_usersLayout->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
     m_usersLayout->setSpacing(kUsersSpacing);
@@ -75,13 +66,13 @@ Panel::Panel(GpuState *state, QWidget *parent)
     auto *content = new QVBoxLayout;
     content->setContentsMargins(kSidePadding, 0, kSidePadding, 0);
     content->setSpacing(kSectionSpacing);
+    content->addWidget(m_gpus);
     content->addWidget(m_banner);
     content->addWidget(m_modes);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, kSidePadding, 0, kSidePadding);
     layout->setSpacing(kSectionSpacing);
-    layout->addLayout(header);
     layout->addLayout(content);
     layout->addWidget(m_usersGroup);
     layout->addStretch(1);
@@ -103,9 +94,43 @@ Panel::Panel(GpuState *state, QWidget *parent)
 
 void Panel::refresh()
 {
-    m_dgpuStatus->setText(Texts::dgpuStatus(m_state->dgpuStatus()));
+    m_gpus->setLines(gpuLines());
     m_banner->setSpec(currentBanner());
     m_modes->setModes(m_state->offeredModes(), m_state->configuredMode(), m_state->activeMode());
+}
+
+// One line per GPU with its state, as on the control-center page: the integrated GPU is invisible
+// while the MUX routes the panel through the discrete GPU, and a discrete GPU removed for
+// integrated mode is listed as off (its name went with it).
+QList<InfoCard::Line> Panel::gpuLines() const
+{
+    QList<InfoCard::Line> lines;
+    const Hardware &hw = m_state->hardware();
+    for (int i = 0; i < hw.gpus.size(); ++i) {
+        const Gpu &gpu = hw.gpus.at(i);
+        const bool discrete = i == hw.discreteIndex;
+        if (!discrete && m_state->activeMode() == Mode::MuxDedicated)
+            continue;
+        const QString name = gpu.name.isEmpty() ? gpu.pciAddress : gpu.name;
+        const DgpuStatus status = discrete ? m_state->dgpuStatus() : DgpuStatus::Active;
+        lines.append({ name, Texts::dgpuStatus(status) });
+    }
+    if (!hw.discreteGpu() && m_state->dgpuStatus() == DgpuStatus::Off)
+        lines.append({ QpTexts::discreteGpu(), Texts::dgpuStatus(DgpuStatus::Off) });
+    return lines;
+}
+
+void Panel::setPageMinimumHeight(int height)
+{
+    setMinimumHeight(height);
+    updateGeometry();
+    adjustSize();
+}
+
+QSize Panel::sizeHint() const
+{
+    const QSize hint = QWidget::sizeHint();
+    return { hint.width(), qMax(hint.height(), minimumHeight()) };
 }
 
 BannerSpec Panel::currentBanner()

@@ -4,6 +4,7 @@
 #include "agino-gpu-client/gpucontrol.h"
 #include "agino-gpu-client/gpustate.h"
 #include "bannerwidget.h"
+#include "itemrow.h"
 #include "modeswitcher.h"
 
 #include <QWidget>
@@ -27,6 +28,9 @@ public:
     explicit Panel(GpuState *state, QWidget *parent = nullptr);
 
     void refresh();
+    // The page area height the quick panel reported; the settings entry stays at its bottom.
+    void setPageMinimumHeight(int height);
+    QSize sizeHint() const override;
 
 Q_SIGNALS:
     void requestHide();
@@ -36,6 +40,7 @@ protected:
     void hideEvent(QHideEvent *event) override;
 
 private:
+    QList<InfoCard::Line> gpuLines() const;
     BannerSpec currentBanner();
     BannerSpec noticeBanner() const;
     BannerSpec pendingBanner();
@@ -47,7 +52,7 @@ private:
     GpuState *m_state;
     GpuControl *m_control;
     ModeSwitcher *m_switcher;
-    Dtk::Widget::DLabel *m_dgpuStatus = nullptr;
+    InfoCard *m_gpus;
     BannerWidget *m_banner;
     ModeList *m_modes;
     QWidget *m_usersGroup;

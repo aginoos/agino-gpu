@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QVBoxLayout>
 
 DGUI_USE_NAMESPACE
 DWIDGET_USE_NAMESPACE
@@ -29,6 +30,29 @@ void setTextColor(QWidget *widget, const QColor &color)
     QPalette palette = widget->palette();
     palette.setColor(QPalette::WindowText, color);
     widget->setPalette(palette);
+}
+
+QColor restBackground(const QPalette &palette)
+{
+    QColor color = palette.brightText().color();
+    color.setAlphaF(kRestBackgroundAlpha);
+    return color;
+}
+
+QColor secondaryText(const QPalette &palette)
+{
+    QColor color = palette.brightText().color();
+    color.setAlphaF(kSecondaryTextAlpha);
+    return color;
+}
+
+void paintRounded(QWidget *widget, const QColor &color)
+{
+    QPainter painter(widget);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(color);
+    painter.drawRoundedRect(widget->rect(), kRowRadius, kRowRadius);
 }
 
 void updateSectionColor(DLabel *label)
@@ -127,9 +151,7 @@ void ItemRow::applyColors()
 {
     const QPalette &palette = this->palette();
     const QColor text = m_hovered ? palette.highlightedText().color() : palette.brightText().color();
-    QColor secondary = text;
-    if (!m_hovered)
-        secondary.setAlphaF(kSecondaryTextAlpha);
+    const QColor secondary = m_hovered ? text : secondaryText(palette);
     for (DLabel *label : std::as_const(m_primary))
         setTextColor(label, text);
     for (DLabel *label : std::as_const(m_secondary))
@@ -140,19 +162,8 @@ void ItemRow::applyColors()
 
 void ItemRow::paintEvent(QPaintEvent *)
 {
-    const QPalette &palette = this->palette();
-    QColor background;
-    if (m_hovered) {
-        background = palette.color(QPalette::Active, QPalette::Highlight);
-    } else {
-        background = palette.brightText().color();
-        background.setAlphaF(kRestBackgroundAlpha);
-    }
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(background);
-    painter.drawRoundedRect(rect(), kRowRadius, kRowRadius);
+    paintRounded(this, m_hovered ? palette().color(QPalette::Active, QPalette::Highlight)
+                                 : restBackground(palette()));
 }
 
 void ItemRow::mouseReleaseEvent(QMouseEvent *event)
@@ -162,6 +173,67 @@ void ItemRow::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
     QFrame::mouseReleaseEvent(event);
+}
+
+InfoCard::InfoCard(QWidget *parent)
+    : QFrame(parent)
+{
+    setForegroundRole(QPalette::BrightText);
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+}
+
+void InfoCard::setLines(const QList<Line> &lines)
+{
+    if (lines == m_lines && !m_titles.isEmpty())
+        return;
+    m_lines = lines;
+    while (QLayoutItem *item = layout()->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
+    m_titles.clear();
+    m_values.clear();
+    for (const Line &line : lines) {
+        auto *row = new QWidget(this);
+        row->setFixedHeight(kRowHeight);
+        auto *title = new DLabel(line.title, row);
+        title->setElideMode(Qt::ElideRight);
+        DFontSizeManager::instance()->bind(title, DFontSizeManager::T6);
+        auto *value = new DLabel(line.value, row);
+        DFontSizeManager::instance()->bind(value, DFontSizeManager::T8);
+        auto *rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(kRowPadding, 0, kRowPadding, 0);
+        rowLayout->setSpacing(kRowPadding);
+        rowLayout->addWidget(title, 1);
+        rowLayout->addWidget(value);
+        layout()->addWidget(row);
+        m_titles << title;
+        m_values << value;
+    }
+    applyColors();
+    setVisible(!lines.isEmpty());
+}
+
+bool InfoCard::event(QEvent *event)
+{
+    if (event->type() == QEvent::PaletteChange)
+        applyColors();
+    return QFrame::event(event);
+}
+
+void InfoCard::applyColors()
+{
+    for (DLabel *label : std::as_const(m_titles))
+        setTextColor(label, palette().brightText().color());
+    for (DLabel *label : std::as_const(m_values))
+        setTextColor(label, secondaryText(palette()));
+}
+
+void InfoCard::paintEvent(QPaintEvent *)
+{
+    paintRounded(this, restBackground(palette()));
 }
 
 DLabel *createSectionLabel(const QString &text, QWidget *parent)
