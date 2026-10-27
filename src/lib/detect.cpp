@@ -249,6 +249,15 @@ bool readGpu(const Root &root, const QString &address, const QHash<QString, DrmI
 
 } // namespace
 
+bool displayWithoutDiscreteGpu(const Hardware &hw)
+{
+    for (const Gpu &g : hw.gpus) {
+        if (!g.discrete && !g.connectedOutputs.isEmpty())
+            return true;
+    }
+    return false;
+}
+
 QString vendorName(Vendor vendor)
 {
     switch (vendor) {

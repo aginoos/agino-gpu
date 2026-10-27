@@ -110,7 +110,7 @@ daemon 维护三个量：
 
 开机时（`agino-gpu-apply.service`，`Before=display-manager.service systemd-modules-load.service` 之后的位置见 6.1）：
 
-- NVIDIA：`/etc/modprobe.d/agino-gpu-integrated.conf`：`blacklist nvidia*` 不够（会被 udev/依赖加载），使用 `install nvidia /bin/false` 等四个模块（nvidia、nvidia_drm、nvidia_modeset、nvidia_uvm）；initramfs 里若带 nvidia 模块需要 `update-initramfs`（agino 的 initramfs 是否带 nvidia 要确认，V-2）。
+- NVIDIA：`/etc/modprobe.d/agino-gpu-integrated.conf`：只写 `blacklist` 不够（按名字加载和依赖加载不受它限制），四个模块（nvidia、nvidia_drm、nvidia_modeset、nvidia_uvm）各写 `install <模块> /bin/false`，同时各写一行 `blacklist`：systemd-modules-load 应用 kmod 的黑名单，跳过这些模块而不报错；只有 `install` 时，`/etc/modules-load.d` 里列出的 nvidia_drm 让 systemd-modules-load.service 每次开机失败（157 实测，2026-10-27）。回退恢复独显后（`agino-gpu-apply` 的 restore），udev 只按设备加载 nvidia，apply 再运行一次 `systemd-modules-load` 加载 nvidia_drm 等；initramfs 里若带 nvidia 模块需要 `update-initramfs`（agino 的 initramfs 是否带 nvidia 要确认，V-2）。
 - 把独显及其同一插槽的音频、USB-C 功能从 PCI 移除：`echo 1 > /sys/bus/pci/devices/<addr>/remove`（在驱动加载之前）。移除后设备进入 D3cold 由平台决定；功耗在 157 上实测（V-3）。
 - ASUS：若有 `dgpu_disable`，在移除之后写 1（固件断电），改回其他模式时在开机早期写 0 并重新扫描 PCI（`/sys/bus/pci/rescan`）。驱动加载中绝不写 `dgpu_disable`。
 - AMD/Intel 独显：同样移除 PCI 设备（不需要 modprobe 规则，amdgpu 同时驱动集显时不能拉黑）。

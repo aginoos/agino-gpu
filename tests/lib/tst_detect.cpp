@@ -164,6 +164,26 @@ private Q_SLOTS:
         QVERIFY(!hw.gpus.at(0).discrete);
     }
 
+    // Integrated mode after the discrete GPU is removed looks like "single" (design.md §4.2).
+    void displayWithoutDiscreteGpu_data()
+    {
+        QTest::addColumn<QString>("fixture");
+        QTest::addColumn<bool>("expected");
+        QTest::newRow("single") << "single" << true;
+        QTest::newRow("hybrid-nvidia") << "hybrid-nvidia" << true;
+        QTest::newRow("desktop-igpu-display") << "desktop-igpu-display" << true;
+        QTest::newRow("desktop-dgpu-display") << "desktop-dgpu-display" << false;
+        QTest::newRow("mux-dedicated-active") << "mux-dedicated-active" << false;
+    }
+
+    void displayWithoutDiscreteGpu()
+    {
+        QFETCH(QString, fixture);
+        QFETCH(bool, expected);
+        QCOMPARE(AginoGpu::displayWithoutDiscreteGpu(detectHardware(::fixture(fixture.toUtf8().constData()))),
+                 expected);
+    }
+
     void emptyRoot()
     {
         QTemporaryDir dir;

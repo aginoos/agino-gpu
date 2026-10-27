@@ -81,8 +81,15 @@ QByteArray modprobeIntegratedConfig(const Gpu &dgpu)
 {
     if (dgpu.vendor != Vendor::Nvidia)
         return QByteArray();
+    // blacklist: systemd-modules-load applies kmod's blacklist and skips these quietly; without
+    // it a module listed in /etc/modules-load.d (nvidia_drm) fails the unit on every boot.
+    // install: anything that asks for them by name (modprobe, a dependency) gets an error.
     return generatedHeader()
-        + QByteArrayLiteral("install nvidia /bin/false\n"
+        + QByteArrayLiteral("blacklist nvidia\n"
+                            "blacklist nvidia_drm\n"
+                            "blacklist nvidia_modeset\n"
+                            "blacklist nvidia_uvm\n"
+                            "install nvidia /bin/false\n"
                             "install nvidia_drm /bin/false\n"
                             "install nvidia_modeset /bin/false\n"
                             "install nvidia_uvm /bin/false\n");

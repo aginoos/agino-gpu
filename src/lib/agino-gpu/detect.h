@@ -16,6 +16,11 @@ Hardware detectHardware(const Root &root);
 // GPU; cheap enough for the 2 s poll of the quick panel.
 void refreshGpu(const Root &root, Gpu &gpu);
 
+// True when a GPU other than a discrete one has a connected output. For integrated mode once
+// the discrete GPU is removed: the GPU left is then the only one, and a single GPU is never
+// called integrated (Hardware::integrated() is empty), so that cannot be asked instead.
+bool displayWithoutDiscreteGpu(const Hardware &hw);
+
 QString vendorName(Vendor vendor);
 QString hardwareClassToString(HardwareClass c); // "single", "hybrid", "hybrid-mux", "desktop", "egpu"
 

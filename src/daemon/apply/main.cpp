@@ -10,6 +10,7 @@
 #include "agino-gpu/root.h"
 #include "daemoncommon.h"
 
+#include <QProcess>
 #include <QString>
 #include <QThread>
 
@@ -18,6 +19,8 @@
 using namespace AginoGpu;
 
 namespace {
+
+constexpr char kSystemdModulesLoad[] = "/usr/lib/systemd/systemd-modules-load";
 
 void say(const QString &line)
 {
@@ -57,14 +60,12 @@ void waitForAsusPlatform(const Root &root)
         QThread::msleep(100);
 }
 
-// After the discrete GPU is gone, the integrated GPU must have a screen. Its DRM driver may
-// still be probing, so poll the connectors for up to 10 s.
+// After the discrete GPU is gone, the GPU left must have a screen. Its DRM driver may still be
+// probing, so poll the connectors for up to 10 s.
 bool integratedHasDisplay(const Root &root)
 {
     for (int i = 0; i < 50; ++i) {
-        const Hardware now = detectHardware(root);
-        const Gpu *igpu = now.integrated();
-        if (igpu && !igpu->connectedOutputs.isEmpty())
+        if (displayWithoutDiscreteGpu(detectHardware(root)))
             return true;
         QThread::msleep(200);
     }
@@ -91,6 +92,16 @@ void restoreDiscreteGpu(const Root &root, const Hardware &hw)
             if (!writeSysfsValue(root, QStringLiteral("/sys/bus/pci/devices/%1/uevent").arg(addr), "add", &err))
                 say(err);
         }
+    }
+    // udev loads only the driver the device asks for (nvidia); the modules listed in
+    // /etc/modules-load.d (nvidia_drm) were refused earlier in this boot, so load them again.
+    if (root.prefix().isEmpty()) {
+        QProcess modulesLoad;
+        modulesLoad.start(QString::fromLatin1(kSystemdModulesLoad), QStringList());
+        if (!modulesLoad.waitForFinished(15000) || modulesLoad.exitCode() != 0)
+            say(QStringLiteral("%1 failed").arg(QString::fromLatin1(kSystemdModulesLoad)));
+        else
+            say(QStringLiteral("modules-load.d modules loaded"));
     }
 }
 
