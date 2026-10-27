@@ -59,7 +59,7 @@ AMD、Intel 独显、台式机、eGPU：先按本文实现，**有设备后再�
 
 按应用规则不是模式，是 `hybrid` 下的功能；在 `dedicated` 和 `mux-dedicated` 下规则无意义（全都用独显），在 `integrated` 下规则被忽略，界面上标明。
 
-`integrated` 选“重启”而不是“注销”：要可靠地卸载 nvidia 模块并移除设备，必须在 Xorg 和所有 GL/CUDA 进程启动前完成；注销后仍可能有用户服务占用设备，强行卸载有卡死风险（supergfxctl 的已知问题）。`dedicated` 只改 Xorg 配置，X 服务器重启即可，但 lightdm 注销后是否重启 X 服务器要在 157 上确认（第 11 节 V-1），不确认则同样降级为“重启”。
+`integrated` 选“重启”而不是“注销”：要可靠地卸载 nvidia 模块并移除设备，必须在 Xorg 和所有 GL/CUDA 进程启动前完成；注销后仍可能有用户服务占用设备，强行卸载有卡死风险（supergfxctl 的已知问题）。`dedicated` 只改 Xorg 配置，X 服务器重启即可，lightdm 注销后会启动新的 X 服务器（V-1，2026-10-27 在 157 确认），所以 `dedicated` 与 `hybrid` 之间注销即生效（3.2 规则 5）。
 
 ### 3.2 状态
 
@@ -84,6 +84,7 @@ daemon 维护三个量：
 3. 不同时排队两种操作：已有待生效的模式时再次 `SetMode`，以最后一次为准。
 4. 开机时落实失败（例如 `dedicated` 下 Xorg 起不来），`agino-gpu-apply` 回退到 `hybrid`，把失败原因写进 `/var/lib/agino-gpu/last-failure`，下次登录由快捷面板插件发桌面通知，磁贴副标题变红。
    - 实现细节（P1 审查后）：可能是暂时性的原因（设备晚出现、MUX 接口还没加载）只对本次开机回退，保存的模式不变，下次开机再试；确定不可行的（硬件不支持、固件 MUX 没切过去、集显没有接屏幕）永久改回 `hybrid`。集显模式下 udev 辅助程序遇到 MUX 处于直连、看不到集显、外接显卡坞时不移除独显；`agino-gpu-apply` 移除后若集显 10 秒内没有任何接上的屏幕，就删掉 modprobe 规则、写 `/run/agino-gpu/keep-dgpu`、重新扫描 PCI 并重放 `add` 事件，把独显找回来。
+5. `hybrid` 与 `dedicated` 之间只差 Xorg 配置：lightdm 每启动一个 X 服务器都运行 display-setup 脚本，其中调用 `agino-gpu-apply --x-start`；保存的模式与本次生效的模式都属于这两种、且 `dedicated` 需要的 Xorg 文件已在时，它把 `/run/agino-gpu/state` 的 `ActiveMode` 改成保存的模式并重写 `offload.env`，所以注销后再登录就生效，`PendingAction` 为 `logout`。其他切换仍等下次开机。
 
 ### 3.3 切换前检查（`SetMode` 返回错误或警告）
 
@@ -301,7 +302,7 @@ Chromium 升级后按同样方法重跑（`tests/manual/`，均需在用户的 X
 
 - 接口：`interfaces/pluginsiteminterface_v2.h`，IID `com.deepin.dock.PluginsItemInterface_V2`；`flags()` 为 `Dock::Type_Quick | Dock::Quick_Panel_Multi`（两格，与 Wi-Fi、蓝牙同类），不带 `Attribute_CanInsert`（不能拖到任务栏托盘区，按用户要求不提供托盘图标）；元数据 `{"api":"2.0.0","depends-daemon-dbus-service":""}`；安装到 `/usr/lib/dde-dock/plugins/`；`itemWidget()` 只对 `Dock::QUICK_ITEM_KEY` 返回磁贴，对自己的项键返回空：dde-tray-loader 2.0.38 只在项键有控件时才建托盘项（`WidgetPlugin::itemAdded`），P2 曾返回一个空白占位控件，结果托盘区多出一个空白图标、点开是切换弹窗（2026-10-26 用户在 105 上发现，已去掉）；下级页面靠 `itemPopupApplet(项键)` + `requestSetAppletVisible(项键, true)` 弹出（dde-shell 按 pluginId 匹配，不需要托盘项），关闭面板用 `requestSetAppletVisible(QUICK_ITEM_KEY, false)`（tray-loader 经该键控件所在窗口发 `closeQuickPanel`）；模板参照 `plugins/dde-dock/eye-comfort-mode/`。构建用 dde-tray-loader-dev 的 CMake 包 `DdeTrayLoader`（树内插件链接的 `dockpluginmanager-interface` 不在 dev 包里，树外只用头文件，第一步先验证能否编过，V-8）。
 - 磁贴：只在多显卡时出现。左侧圆形图标表示当前模式；标题“显卡”；副标题只写当前模式名（“混合”），待生效时黄色“待重启”/“待注销”，上次切换失败时红色“切换失败”；独显是否工作在下级页面看。整块磁贴点击进入下级页面，不做“一点就开关”。
-- 下级页面（面板内展开，与 Wi-Fi 列表相同的方式：`itemPopupApplet(QUICK_ITEM_KEY)` 返回页面控件，点击磁贴时 `requestSetAppletVisible(..., true)`；按 eye-comfort-mode 的写法实现，V-10 验证）：顶部“‹ 显卡”标题栏由 dde-shell 画（标题取 `pluginDisplayName`，插件不再自己画），页面第一行“独立显卡”和独显状态（休眠/工作中/已关闭）；最多一条提示条（“重启后切换到集显”［撤销］［立即重启］、“HDMI-1 接在独显上，集显模式下不可用”、“切换到独显优先失败，已恢复为混合”［详情］、“Flatpak 缺少 NVIDIA 运行时”［安装］）；模式单选只有模式名，未选中的项右侧标生效代价（“需重启”“需注销”），不写模式说明；正在使用独显的应用（为空时整组不显示）；底部“显卡设置”跳转控制中心。
+- 下级页面（面板内展开，与 Wi-Fi 列表相同的方式：`itemPopupApplet(QUICK_ITEM_KEY)` 返回页面控件，点击磁贴时 `requestSetAppletVisible(..., true)`；按 eye-comfort-mode 的写法实现，V-10 验证）：顶部“‹ 显卡”标题栏由 dde-shell 画（标题取 `pluginDisplayName`，插件不再自己画），顶部信息卡逐块列出显卡型号和状态（独显：休眠/工作中/已关闭；独显直连时不列集显；没有独显而独显已关闭时列一行“独立显卡 已关闭”）；最多一条提示条（“重启后切换到集显”［撤销］［立即重启］、“HDMI-1 接在独显上，集显模式下不可用”、“切换到独显优先失败，已恢复为混合”［详情］、“Flatpak 缺少 NVIDIA 运行时”［安装］）；模式单选只有模式名，未选中的项右侧标生效代价（“需重启”“需注销”），不写模式说明；正在使用独显的应用（为空时整组不显示；Xorg、Xwayland 不列）；页面最下方“显卡设置”跳转控制中心。样式按 dde-tray-loader 2.0.38 的蓝牙、无线网络子页复刻（D-152）：每项一行独立圆角行，36 px、圆角 8、静止时 brightText 5 % 背景、悬停为主题强调色加 highlightedText，无动画；当前模式用 loader 自带的 `plugin_item_select` 勾选图标；分组标题 T10、按深浅主题黑/白 60 %；页面高度跟随 loader 发来的 `setAppletMinHeight` 消息（`message()`），与其他子页同高。点“立即重启/注销”先收起面板，300 ms 后再发会话请求。
 - 快捷面板白名单：dde-shell 2.0.52 的快捷面板只显示 DConfig `org.deepin.dde.shell` / `org.deepin.ds.dock.tray` 的只读键 `quickPlugins` 里列出的插件（`QuickPanelProxyModel::filterAcceptsRow`；键说明里“未列出的放最后”已与代码不符）。本包装 override `/usr/share/dsg/configs/overrides/org.deepin.dde.shell/org.deepin.ds.dock.tray/50-agino-gpu.json`，在默认列表的连接类磁贴（network、bluetooth、wireless-casting）之后插入 `agino-gpu`；整表替换，dde-shell 改默认列表时要同步。安装后由 dde-dconfig-daemon 的 dpkg 触发器重载，任务栏重启（或重新登录）后生效。（2026-10-26 在 105 实测）
 - 系统通知：插件加载时若有 `/var/lib/agino-gpu/last-failure`，发一次桌面通知：标题“显卡模式切换失败”，正文“已恢复为混合”，按钮“详情”；通知关闭后不再提醒。
 - 注销、重启：`org.deepin.dde.SessionManager1` 的注销与 `RequestReboot`（agino 现有代码已在用）。
@@ -358,8 +359,8 @@ agino-gpu/
 
 | 编号 | 内容 | 影响 |
 |---|---|---|
-| V-1 | lightdm 注销后是否重启 X 服务器 | `dedicated` 是“注销”还是“重启”生效 |
-| V-2 | agino 的 initramfs 是否带 nvidia 模块 | 分析（2026-10-26）：不需要 `update-initramfs`。initramfs 里旧的 modprobe 配置最多让 nvidia 在 initramfs 阶段加载不了，切到真实根文件系统后照常加载；反过来若 nvidia 已在 initramfs 里加载，移除 PCI 设备时内核先解绑驱动。仍要在 157 上用 `lsinitramfs` 核实 |
+| V-1 | lightdm 注销后是否重启 X 服务器 | 已确认会（2026-10-27，157）：注销后 lightdm 启动新的 X 服务器并运行 display-setup，`hybrid` ↔ `dedicated` 注销即生效（3.2 规则 5） |
+| V-2 | agino 的 initramfs 是否带 nvidia 模块 | 分析（2026-10-26）：不需要 `update-initramfs`。initramfs 里旧的 modprobe 配置最多让 nvidia 在 initramfs 阶段加载不了，切到真实根文件系统后照常加载；反过来若 nvidia 已在 initramfs 里加载，移除 PCI 设备时内核先解绑驱动。157 核实（2026-10-27）：initramfs 不带 nvidia 模块；里面残留的旧 `agino-gpu-integrated.conf`（集显模式期间某次 update-initramfs 带进去的）因此无害，下次重建 initramfs 时消失 |
 | V-3 | 157 移除 PCI 设备 / `dgpu_disable` 后的功耗 | `integrated` 的实际价值 |
 | V-4 | 反向 PRIME 下 dde-daemon 显示服务和 KWin 的表现 | `dedicated` 可用性 |
 | V-5 | NVIDIA EGL 在 X11 按需渲染下是否正常 | 2026-10-26 在 105（RTX 5080，驱动 580.178.04，Chromium 156）上测：`eglinfo -p x11` 带 5.1 的变量时 EGL 厂商为 NVIDIA、渲染器 RTX 5080，Firefox（EGL）P2 已实测在独显上；**Chromium 默认的 ANGLE-GL 失败**（`ANGLE Display::initialize error 12289: Invalid visual ID requested`，GPU 进程反复退出后整页软件渲染，独显照样被唤醒）。加 `--use-angle=vulkan --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan` 后正常（`GL_RENDERER = ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA GeForce RTX 5080 …))`，各项硬件加速）；只加 `--use-angle=vulkan` 不够。Debian 的 `/usr/bin/chromium` 开头把 `CHROMIUM_FLAGS` 置空，环境变量传不进去，只能经 `/etc/chromium.d/` 片段或命令行参数。Vulkan：带变量时 NVIDIA 排第一，但 `__VK_LAYER_NV_optimus=NVIDIA_only` 没有隐藏集显和 llvmpipe |
@@ -371,6 +372,26 @@ agino-gpu/
 | V-9 | 157 是否有 `gpu_mux_mode`，切换后重启的实际流程 | `mux-dedicated` |
 | V-12 | 读 DRM 接口的 `status` 会不会唤醒挂起的独显 | 已确认不会：内核 `drm_sysfs.c` 的 `status_show` 只读缓存值（`READ_ONCE(connector->status)`，7.3 源码，2026-10-26） |
 | V-13 | agino 装好的系统里 lightdm 是否已有别的 `display-setup-script`（deepin 25 的 lastore 用 `90-deepin-upgrade.conf` 占用；agino 不装 lastore） | 有则 `display-setup` 要串联调用原脚本，而不是覆盖 |
+
+### 9.5 P5 真机记录（157，2026-10-27，用户在机器旁操作）
+
+硬件：ROG Zephyrus G16 GU605CW，Intel Arrow Lake 集显 + RTX 5080 Laptop（驱动 580.178.04），ASUS `gpu_mux_mode` 和 `dgpu_disable` 都有；内置屏 Samsung ATNA60DL01 OLED。
+
+- 通过：
+  - `hybrid` ↔ `dedicated` 注销生效（V-1）。
+  - `hybrid` → `mux-dedicated` → `hybrid` 重启生效。
+  - sudo 组本地会话切换不弹授权框（D-150）。
+  - 点“立即重启”先收起面板（D-152）。
+  - 子页样式与蓝牙页一致（浅色主题）。
+  - 信息卡显示显卡型号和状态，“显卡设置”在最下方，Xorg 不再出现在独显程序列表里。
+- 发现并修复：
+  - 同一次开机里 `hybrid` → `mux-dedicated` → `hybrid` 后，重启仍停在直连。原因是 `gpu_mux_mode` 读回的是本次开机的位置，不是已写入、待生效的值（4.4）。`SetMode` 原先“读到的值已是目标就不写”，所以没写回 1。现在每次都写目标位置，回滚写回原模式对应的位置；已重启验证。
+  - 混合模式下内置屏不能调亮度：屏没有 PWM 输入，i915 按 VBT 走了 PWM。修复属于 infra（D-151，kernel-graphics-hardware.md 10.19），与本项目无关；独显直连时亮度一直正常。
+  - 读 `/proc/driver/nvidia/gpus/*/information` 会唤醒休眠的独显：测试脚本不再读它，状态只看 `power/runtime_status`。
+- 待补：
+  - 用最新包重测 `integrated` ↔ `hybrid`。
+  - 深色主题截图。
+  - D-151 的 grub.d 方案重启复验（157 暂时离线）。
 
 ## 10. 分期
 
