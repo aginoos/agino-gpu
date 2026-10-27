@@ -24,6 +24,9 @@ namespace AginoGpu {
 
 namespace {
 constexpr int kUsersIntervalMs = 2000;
+// Restart and log out close the panel first; the session request follows once it has gone, or
+// the panel stays on the darkening screen until the session ends.
+constexpr int kSessionRequestDelayMs = 300;
 }
 
 Panel::Panel(GpuState *state, QWidget *parent)
@@ -121,7 +124,7 @@ BannerSpec Panel::noticeBanner() const
                { QpTexts::cancel(), [this] { m_switcher->clearNotice(); } } } };
 }
 
-BannerSpec Panel::pendingBanner() const
+BannerSpec Panel::pendingBanner()
 {
     const PendingAction action = m_state->pendingAction();
     if (action == PendingAction::None)
@@ -129,9 +132,9 @@ BannerSpec Panel::pendingBanner() const
     BannerSpec spec { Texts::pendingBanner(m_state->configuredMode(), action), {} };
     spec.actions << BannerAction { Texts::undo(), [this] { m_switcher->undo(); } };
     if (action == PendingAction::Reboot)
-        spec.actions << BannerAction { Texts::restartNow(), [] { Session::requestReboot(); } };
+        spec.actions << BannerAction { Texts::restartNow(), [this] { closeThen(&Session::requestReboot); } };
     else
-        spec.actions << BannerAction { Texts::logoutNow(), [] { Session::requestLogout(); } };
+        spec.actions << BannerAction { Texts::logoutNow(), [this] { closeThen(&Session::requestLogout); } };
     return spec;
 }
 
@@ -161,6 +164,12 @@ void Panel::showUsers(const QList<GpuUser> &users)
     for (const QString &name : names)
         m_usersLayout->addWidget(new DLabel(name, m_usersGroup));
     m_usersGroup->setVisible(!names.isEmpty());
+}
+
+void Panel::closeThen(void (*sessionRequest)())
+{
+    Q_EMIT requestHide();
+    QTimer::singleShot(kSessionRequestDelayMs, this, sessionRequest);
 }
 
 void Panel::openSettings()

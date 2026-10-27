@@ -38,10 +38,11 @@ protected:
 private:
     BannerSpec currentBanner();
     BannerSpec noticeBanner() const;
-    BannerSpec pendingBanner() const;
+    BannerSpec pendingBanner();
     void refreshUsers();
     void showUsers(const QList<GpuUser> &users);
     void openSettings();
+    void closeThen(void (*sessionRequest)());
 
     GpuState *m_state;
     GpuControl *m_control;
